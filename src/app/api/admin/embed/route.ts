@@ -102,10 +102,12 @@ export async function POST(request: Request) {
     // pdfjs-dist 및 canvas 동적 import (서버리스 환경 호환)
     const pdfjsLib = await import('pdfjs-dist')
     const { createCanvas } = await import('canvas')
+    const { join } = await import('path')
+    const { pathToFileURL } = await import('url')
 
-    // pdfjs-dist 5.x: workerSrc에 빈 문자열 불가 — CDN URL 사용
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+    // Node.js ESM은 file: 프로토콜만 허용 — 로컬 worker 파일 경로로 지정
+    const workerPath = join(process.cwd(), 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.mjs')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href
 
     // Node.js 환경용 Canvas 팩토리
     const nodeCanvasFactory = {
