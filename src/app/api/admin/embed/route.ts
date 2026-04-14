@@ -62,11 +62,10 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await fileData.arrayBuffer())
 
-    // pdf-parse v2로 텍스트 추출
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: buffer })
-    const pdfData = await parser.getText()
-    const text = pdfData.text
+    // unpdf로 텍스트 추출 (Vercel 서버리스 환경 호환)
+    const { getDocumentProxy, extractText } = await import('unpdf')
+    const pdf = await getDocumentProxy(new Uint8Array(buffer))
+    const { text } = await extractText(pdf, { mergePages: true })
 
     if (!text?.trim()) throw new Error('No text extracted')
 
