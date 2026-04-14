@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
-import { setupDOMPolyfills } from '@/lib/dom-polyfills'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -96,22 +95,12 @@ export async function POST(request: Request) {
     if (downloadError || !fileData) throw new Error('Download failed')
     const buffer = Buffer.from(await fileData.arrayBuffer())
 
-    // pdfjs-dist 5.x 요구 DOM API 폴리필 설정 (module import 전에 실행)
-    setupDOMPolyfills()
-
-    // pdfjs-dist 및 canvas 동적 import (서버리스 환경 호환)
+    // pdfjs-dist 4.x + canvas 동적 import (서버리스 환경 호환)
     const pdfjsLib = await import('pdfjs-dist')
     const { createCanvas } = await import('canvas')
-    const { readFileSync } = await import('fs')
-    const { join } = await import('path')
 
-    // Node.js ESM은 file:/data: 프로토콜만 허용.
-    // 파일 경로가 환경마다 다를 수 있으므로 worker를 data: URL로 인라인 임베딩.
-    const workerContent = readFileSync(
-      join(process.cwd(), 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.min.mjs'),
-      'base64'
-    )
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `data:text/javascript;base64,${workerContent}`
+    // pdfjs-dist 4.x: workerSrc = '' → 메인 스레드(worker 없음) 모드
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
     // Node.js 환경용 Canvas 팩토리
     const nodeCanvasFactory = {
@@ -153,9 +142,8 @@ export async function POST(request: Request) {
       const canvasObj = nodeCanvasFactory.create(viewport.width, viewport.height)
       await page.render({
         canvasContext: canvasObj.context as any,
-        canvas: canvasObj.canvas as any,
         viewport,
-      }).promise
+      } as any).promise
 
       const imageBase64 = (canvasObj.canvas as any)
         .toBuffer('image/jpeg', { quality: 0.85 })
