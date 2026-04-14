@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { setupDOMPolyfills } from '@/lib/dom-polyfills'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -94,6 +95,9 @@ export async function POST(request: Request) {
       .download(doc.storage_path)
     if (downloadError || !fileData) throw new Error('Download failed')
     const buffer = Buffer.from(await fileData.arrayBuffer())
+
+    // pdfjs-dist 5.x 요구 DOM API 폴리필 설정 (module import 전에 실행)
+    setupDOMPolyfills()
 
     // pdfjs-dist 및 canvas 동적 import (서버리스 환경 호환)
     const pdfjsLib = await import('pdfjs-dist')
