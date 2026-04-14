@@ -9,6 +9,9 @@ ALTER TABLE public.document_chunks
   ADD COLUMN IF NOT EXISTS page_number integer NOT NULL DEFAULT 0;
 
 -- 2. match_document_chunks 함수 업데이트 (page_number 반환 추가)
+--    반환 타입이 변경되므로 기존 함수를 먼저 삭제합니다.
+DROP FUNCTION IF EXISTS match_document_chunks(vector, double precision, integer);
+
 CREATE OR REPLACE FUNCTION match_document_chunks(
   query_embedding vector(1536),
   match_threshold float,
