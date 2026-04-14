@@ -6,6 +6,9 @@
     "src/app/api/admin/documents/upload/route.ts": {
       "maxDuration": 60
     },
+    "src/app/api/admin/embed/route.ts": {
+      "maxDuration": 60
+    },
     "src/app/api/chat/route.ts": {
       "maxDuration": 30
     },

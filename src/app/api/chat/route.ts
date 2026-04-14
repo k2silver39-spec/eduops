@@ -12,6 +12,7 @@ interface HistoryMessage {
 interface Source {
   filename: string
   chunk_index: number
+  page_number: number
 }
 
 async function embedText(text: string): Promise<number[]> {
@@ -74,12 +75,16 @@ export async function POST(request: Request) {
   }
 
   // 4. 컨텍스트 및 출처 구성
-  const sources: Source[] = chunks.map((c: { filename: string; chunk_index: number }) => ({
+  const sources: Source[] = chunks.map((c: { filename: string; chunk_index: number; page_number: number }) => ({
     filename: c.filename,
     chunk_index: c.chunk_index,
+    page_number: c.page_number ?? 0,
   }))
-  const context = (chunks as { content: string; filename: string }[])
-    .map((c, i) => `[문서 ${i + 1}] (출처: ${c.filename})\n${c.content}`)
+  const context = (chunks as { content: string; filename: string; page_number: number }[])
+    .map((c, i) => {
+      const pageInfo = c.page_number > 0 ? ` ${c.page_number}페이지` : ''
+      return `[문서 ${i + 1}] (출처: ${c.filename}${pageInfo})\n${c.content}`
+    })
     .join('\n\n')
 
   const systemPrompt = `당신은 교육운영 규정 문서를 기반으로 답변하는 전문 어시스턴트입니다.

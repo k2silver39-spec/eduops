@@ -7,9 +7,12 @@ DROP INDEX IF EXISTS document_chunks_embedding_idx;
 CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx
   ON public.document_chunks USING hnsw (embedding vector_cosine_ops);
 
--- 1. document_chunks에 chunk_index 컬럼 추가
+-- 1. document_chunks에 chunk_index, page_number 컬럼 추가
 ALTER TABLE public.document_chunks
   ADD COLUMN IF NOT EXISTS chunk_index integer NOT NULL DEFAULT 0;
+
+ALTER TABLE public.document_chunks
+  ADD COLUMN IF NOT EXISTS page_number integer NOT NULL DEFAULT 0;
 
 -- 2. documents RLS 활성화 (로그인 사용자 읽기)
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
@@ -69,7 +72,7 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- 5. pgvector 유사도 검색 함수
+-- 5. pgvector 유사도 검색 함수 (page_number 포함)
 CREATE OR REPLACE FUNCTION match_document_chunks(
   query_embedding vector(1536),
   match_threshold float,
@@ -80,6 +83,7 @@ RETURNS TABLE (
   document_id uuid,
   content     text,
   chunk_index int,
+  page_number int,
   similarity  float,
   filename    text
 )
@@ -90,6 +94,7 @@ AS $$
     dc.document_id,
     dc.content,
     dc.chunk_index,
+    dc.page_number,
     1 - (dc.embedding <=> query_embedding) AS similarity,
     d.filename
   FROM public.document_chunks dc
