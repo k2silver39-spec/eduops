@@ -34,16 +34,25 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
   // 접근 권한 체크: 비공개 글은 본인/관리자만
   if (!isAdmin && !isOwner && !inquiry.is_public) notFound()
 
-  const { data: replies } = await admin
-    .from('inquiry_replies')
-    .select('*, admin:profiles!admin_id(name)')
-    .eq('inquiry_id', id)
-    .order('created_at', { ascending: true })
+  const [{ data: replies }, { data: attachments }] = await Promise.all([
+    admin
+      .from('inquiry_replies')
+      .select('*, admin:profiles!admin_id(name)')
+      .eq('inquiry_id', id)
+      .order('created_at', { ascending: true }),
+    admin
+      .from('attachments')
+      .select('id, filename, size, created_at')
+      .eq('entity_type', 'inquiry')
+      .eq('entity_id', id)
+      .order('created_at', { ascending: true }),
+  ])
 
   return (
     <InquiryDetail
       inquiry={inquiry}
       replies={replies ?? []}
+      attachments={attachments ?? []}
       currentUserId={user.id}
       isAdmin={isAdmin}
     />

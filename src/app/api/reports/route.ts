@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { type, period_label, period_start, period_end, content, status } = body
+  const { type, period_label, period_start, period_end, content, status, attachments } = body
 
   if (!type || !period_label || !period_start || !period_end || !content || !status) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
@@ -90,5 +90,18 @@ export async function POST(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    await admin.from('attachments').insert(
+      attachments.map((a: { path: string; filename: string; size: number }) => ({
+        entity_type: 'report',
+        entity_id: data.id,
+        filename: a.filename,
+        storage_path: a.path,
+        size: a.size,
+      }))
+    )
+  }
+
   return NextResponse.json({ id: data.id })
 }

@@ -56,6 +56,19 @@ function isPastDeadline(periodEnd: string): boolean {
   return new Date().toISOString().split('T')[0] > periodEnd
 }
 
+interface Attachment {
+  id: string
+  filename: string
+  size: number
+  created_at: string
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
 function ProgressBar({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-3">
@@ -159,10 +172,12 @@ function MonthlyView({ content }: { content: MonthlyContent }) {
 
 export default function ReportDetail({
   report: initial,
+  attachments,
   currentUserId,
   isAdmin,
 }: {
   report: Report
+  attachments: Attachment[]
   currentUserId: string
   isAdmin: boolean
 }) {
@@ -241,6 +256,30 @@ export default function ReportDetail({
           : <MonthlyView content={report.content as MonthlyContent} />
         }
       </div>
+
+      {/* 첨부파일 */}
+      {attachments.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">첨부파일 ({attachments.length})</p>
+          <div className="space-y-1.5">
+            {attachments.map((a) => (
+              <a
+                key={a.id}
+                href={`/api/attachments/${a.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-lg transition-colors group"
+              >
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                </svg>
+                <span className="text-sm text-gray-700 group-hover:text-blue-700 flex-1 truncate">{a.filename}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">{formatSize(a.size)}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 액션 버튼 (본인 보고서) */}
       {isOwner && (

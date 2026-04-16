@@ -11,7 +11,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   if (!user) notFound()
 
   const admin = createAdminClient()
-  const [{ data: report }, { data: profile }] = await Promise.all([
+  const [{ data: report }, { data: profile }, { data: attachments }] = await Promise.all([
     admin
       .from('reports')
       .select('*, author:profiles!user_id(name)')
@@ -22,6 +22,12 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
       .select('role, organization')
       .eq('id', user.id)
       .single(),
+    admin
+      .from('attachments')
+      .select('id, filename, size, created_at')
+      .eq('entity_type', 'report')
+      .eq('entity_id', id)
+      .order('created_at', { ascending: true }),
   ])
 
   if (!report) notFound()
@@ -36,6 +42,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   return (
     <ReportDetail
       report={report}
+      attachments={attachments ?? []}
       currentUserId={user.id}
       isAdmin={isAdmin}
     />

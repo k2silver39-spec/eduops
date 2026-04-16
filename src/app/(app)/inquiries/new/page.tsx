@@ -1,10 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 const CATEGORIES = ['수업', '행정', '시설', '기타'] as const
 type Category = typeof CATEGORIES[number]
+
+interface PendingFile {
+  path: string
+  filename: string
+  size: number
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
 
 export default function NewInquiryPage() {
   const router = useRouter()
@@ -16,6 +28,33 @@ export default function NewInquiryPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const [files, setFiles] = useState<PendingFile[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? [])
+    if (!selected.length) return
+    e.target.value = ''
+    setUploading(true)
+    for (const file of selected) {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        setFiles(prev => [...prev, { path: data.path, filename: data.filename, size: data.size }])
+      } else {
+        setError(data.error ?? '파일 업로드 실패')
+      }
+    }
+    setUploading(false)
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +70,7 @@ export default function NewInquiryPage() {
         content: form.content.trim(),
         category: form.category,
         is_public: form.is_public,
+        attachments: files,
       }),
     })
 
@@ -107,6 +147,39 @@ export default function NewInquiryPage() {
           />
         </div>
 
+        {/* File upload */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">첨부파일 <span className="text-gray-300 font-normal">(선택, 파일당 10MB 이하)</span></label>
+          <div className="space-y-2">
+            {files.map((f, i) => (
+              <div key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                </svg>
+                <span className="text-sm text-gray-700 flex-1 truncate">{f.filename}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">{formatSize(f.size)}</span>
+                <button type="button" onClick={() => removeFile(i)} className="p-0.5 text-gray-400 hover:text-red-500 flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors w-full disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              {uploading ? '업로드 중...' : '파일 추가'}
+            </button>
+            <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFileChange} />
+          </div>
+        </div>
+
         {/* Public toggle */}
         <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3">
           <div>
@@ -136,7 +209,7 @@ export default function NewInquiryPage() {
 
         <button
           type="submit"
-          disabled={loading || !form.title.trim() || !form.content.trim()}
+          disabled={loading || uploading || !form.title.trim() || !form.content.trim()}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 rounded-xl text-sm transition-colors"
         >
           {loading ? '등록 중...' : '문의 등록'}
