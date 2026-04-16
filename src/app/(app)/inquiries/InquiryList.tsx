@@ -174,7 +174,7 @@ export default function InquiryList() {
             <p className="text-sm text-gray-500">문의가 없습니다</p>
           </div>
         ) : (
-          inquiries.map((inquiry) => (
+          inquiries.map((inquiry, index) => (
             <Link
               key={inquiry.id}
               href={`/inquiries/${inquiry.id}`}
@@ -182,6 +182,9 @@ export default function InquiryList() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  <span className="text-xs font-medium text-gray-300 flex-shrink-0">
+                    {totalCount - page * PAGE_SIZE - index}
+                  </span>
                   <CategoryBadge category={inquiry.category} />
                   {!inquiry.is_public && (
                     <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
