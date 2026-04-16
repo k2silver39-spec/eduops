@@ -24,6 +24,12 @@ interface Inquiry {
   author: { name: string } | null
 }
 
+function maskName(name: string | null | undefined): string {
+  if (!name) return '알 수 없음'
+  if (name.length <= 1) return name
+  return name[0] + '*'.repeat(name.length - 1)
+}
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -227,7 +233,7 @@ export default function InquiryDetail({
           {/* Footer */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-400">
-              {inquiry.author?.name ?? '알 수 없음'} · {formatDate(inquiry.created_at)}
+              {isAdmin || isOwner ? (inquiry.author?.name ?? '알 수 없음') : maskName(inquiry.author?.name)} · {formatDate(inquiry.created_at)}
             </p>
             <div className="flex items-center gap-2">
               {isAdmin && !editing && (

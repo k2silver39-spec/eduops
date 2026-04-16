@@ -19,6 +19,12 @@ type CategoryFilter = 'all' | '수업' | '행정' | '시설' | '기타'
 
 const PAGE_SIZE = 20
 
+function maskName(name: string | null | undefined): string {
+  if (!name) return '알 수 없음'
+  if (name.length <= 1) return name
+  return name[0] + '*'.repeat(name.length - 1)
+}
+
 function formatDate(dateStr: string) {
   const date = new Date(dateStr)
   return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -187,7 +193,7 @@ export default function InquiryList() {
               </div>
               <p className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">{inquiry.title}</p>
               <p className="mt-1 text-xs text-gray-400">
-                {inquiry.author?.name ?? '알 수 없음'} · {formatDate(inquiry.created_at)}
+                {maskName(inquiry.author?.name)} · {formatDate(inquiry.created_at)}
               </p>
             </Link>
           ))
