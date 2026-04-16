@@ -233,7 +233,11 @@ export default function InquiryDetail({
           {/* Footer */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-400">
-              {isAdmin || isOwner ? (inquiry.author?.name ?? '알 수 없음') : maskName(inquiry.author?.name)} · {formatDate(inquiry.created_at)}
+              {isAdmin || isOwner ? (inquiry.author?.name ?? '알 수 없음') : maskName(inquiry.author?.name)}
+              {isAdmin && inquiry.organization && (
+                <span className="ml-1 text-gray-400">· {inquiry.organization}</span>
+              )}
+              {' · '}{formatDate(inquiry.created_at)}
             </p>
             <div className="flex items-center gap-2">
               {isAdmin && !editing && (
