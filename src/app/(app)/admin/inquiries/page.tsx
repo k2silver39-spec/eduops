@@ -23,10 +23,10 @@ const STATUS_LABEL: Record<string, string> = {
   open: '답변대기', in_progress: '처리중', closed: '답변완료',
 }
 const CAT_COLORS: Record<string, string> = {
-  '교육': 'bg-blue-50 text-blue-600',
-  '사업': 'bg-purple-50 text-purple-600',
-  '예산': 'bg-orange-50 text-orange-600',
-  '기타': 'bg-gray-100 text-gray-600',
+  '교육': 'bg-blue-100 text-blue-700',
+  '사업': 'bg-emerald-100 text-emerald-700',
+  '예산': 'bg-amber-100 text-amber-700',
+  '기타': 'bg-gray-100 text-gray-500',
 }
 
 function formatDate(d: string) {
