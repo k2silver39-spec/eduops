@@ -31,8 +31,8 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
   const isOwner = inquiry.user_id === user.id
   const isSameOrg = profile?.organization === inquiry.organization
 
-  // 접근 권한 체크
-  if (!isAdmin && !isOwner && !(inquiry.is_public && isSameOrg)) notFound()
+  // 접근 권한 체크: 비공개 글은 본인/관리자만
+  if (!isAdmin && !isOwner && !inquiry.is_public) notFound()
 
   const { data: replies } = await admin
     .from('inquiry_replies')

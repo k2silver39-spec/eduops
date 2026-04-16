@@ -31,9 +31,9 @@ export async function GET(request: Request) {
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1)
 
-  // 권한 필터: admin이 아닌 경우 본인 글 + 같은 기관 공개글만
+  // 권한 필터: admin이 아닌 경우 본인 글 + 전체 공개글
   if (!isAdmin) {
-    query = query.or(`user_id.eq.${user.id},and(is_public.eq.true,organization.eq.${profile.organization})`)
+    query = query.or(`user_id.eq.${user.id},is_public.eq.true`)
   }
 
   if (search) {

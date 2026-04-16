@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import pdfParse from 'pdf-parse'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -10,6 +11,13 @@ async function requireAdmin() {
   const { data: p } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (p?.role !== 'super_admin') return null
   return { user, admin }
+}
+
+function sanitizeText(text: string): string {
+  return text
+    .replace(/\u0000/g, '')          // null 바이트 제거
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // 제어 문자 제거
+    .trim()
 }
 
 function chunkText(text: string, maxChars = 800): string[] {
@@ -41,41 +49,6 @@ async function embed(text: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function extractPageTextViaVision(imageBase64: string): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`,
-                detail: 'high',
-              },
-            },
-            {
-              type: 'text',
-              text: '이 페이지의 모든 내용을 텍스트로 변환해줘. 표는 마크다운 표 형식으로, 이미지/차트는 내용을 텍스트로 설명해줘.',
-            },
-          ],
-        },
-      ],
-    }),
-  })
-  if (!res.ok) throw new Error(`Vision API 오류: ${res.status} ${await res.text()}`)
-  const data = await res.json()
-  return data.choices[0]?.message?.content ?? ''
-}
-
 export async function POST(request: Request) {
   const ctx = await requireAdmin()
   if (!ctx) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -95,88 +68,40 @@ export async function POST(request: Request) {
     if (downloadError || !fileData) throw new Error('Download failed')
     const buffer = Buffer.from(await fileData.arrayBuffer())
 
-    // pdfjs-dist 4.x + canvas 동적 import (서버리스 환경 호환)
-    const pdfjsLib = await import('pdfjs-dist')
-    const { createCanvas } = await import('canvas')
+    // pdf-parse로 전체 텍스트 추출 (Node.js 전용, 브라우저 API 불필요)
+    const parsed = await pdfParse(buffer)
+    const fullText = sanitizeText(parsed.text)
 
-    // pdfjs-dist 4.x: workerSrc = '' → 메인 스레드(worker 없음) 모드
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-
-    // Node.js 환경용 Canvas 팩토리
-    const nodeCanvasFactory = {
-      create(width: number, height: number) {
-        const canvas = createCanvas(width, height)
-        return { canvas, context: canvas.getContext('2d') }
-      },
-      reset(canvasAndContext: { canvas: any; context: any }, width: number, height: number) {
-        canvasAndContext.canvas.width = width
-        canvasAndContext.canvas.height = height
-      },
-      destroy(canvasAndContext: { canvas: any; context: any }) {
-        canvasAndContext.canvas.width = 0
-        canvasAndContext.canvas.height = 0
-      },
+    if (!fullText) {
+      await admin.from('documents').update({ status: 'error' }).eq('id', documentId)
+      return NextResponse.json({ error: '텍스트를 추출할 수 없습니다. 스캔 이미지 PDF는 지원되지 않습니다.' }, { status: 422 })
     }
-
-    // PDF 로드
-    const pdfDoc = await pdfjsLib.getDocument({
-      data: new Uint8Array(buffer),
-      canvasFactory: nodeCanvasFactory as any,
-      useSystemFonts: true,
-      disableFontFace: true,
-      verbosity: 0,
-    } as any).promise
-
-    const numPages = pdfDoc.numPages
 
     // 기존 청크 삭제
     await admin.from('document_chunks').delete().eq('document_id', documentId)
 
+    const chunks = chunkText(fullText)
     let totalChunks = 0
 
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdfDoc.getPage(pageNum)
-      const viewport = page.getViewport({ scale: 1.5 })
-
-      // 페이지를 이미지로 렌더링
-      const canvasObj = nodeCanvasFactory.create(viewport.width, viewport.height)
-      await page.render({
-        canvasContext: canvasObj.context as any,
-        viewport,
-      } as any).promise
-
-      const imageBase64 = (canvasObj.canvas as any)
-        .toBuffer('image/jpeg', { quality: 0.85 })
-        .toString('base64')
-      nodeCanvasFactory.destroy(canvasObj)
-
-      // GPT-4o Vision으로 페이지 텍스트 추출
-      const pageText = await extractPageTextViaVision(imageBase64)
-      if (!pageText.trim()) continue
-
-      // 청크 분할
-      const chunks = chunkText(pageText)
-
-      // 임베딩 생성 및 저장 (배치: 3개씩)
-      const BATCH = 3
-      for (let i = 0; i < chunks.length; i += BATCH) {
-        const batch = chunks.slice(i, i + BATCH)
-        await Promise.all(
-          batch.map(async (content, batchIdx) => {
-            const chunkIndex = totalChunks + i + batchIdx
-            const embedding = await embed(content)
-            await admin.from('document_chunks').insert({
-              document_id: documentId,
-              content,
-              embedding: `[${embedding.join(',')}]`,
-              chunk_index: chunkIndex,
-              page_number: pageNum,
-            })
+    // 임베딩 생성 및 저장 (배치: 3개씩)
+    const BATCH = 3
+    for (let i = 0; i < chunks.length; i += BATCH) {
+      const batch = chunks.slice(i, i + BATCH)
+      await Promise.all(
+        batch.map(async (content, batchIdx) => {
+          const chunkIndex = i + batchIdx
+          const embedding = await embed(content)
+          const { error: insertError } = await admin.from('document_chunks').insert({
+            document_id: documentId,
+            content: sanitizeText(content),
+            embedding: `[${embedding.join(',')}]`,
+            chunk_index: chunkIndex,
+            page_number: 0,
           })
-        )
-      }
-
-      totalChunks += chunks.length
+          if (insertError) throw new Error(`청크 저장 실패: ${insertError.message}`)
+        })
+      )
+      totalChunks += batch.length
     }
 
     // 문서 상태 업데이트
@@ -185,7 +110,7 @@ export async function POST(request: Request) {
       .update({ status: 'ready', chunk_count: totalChunks })
       .eq('id', documentId)
 
-    return NextResponse.json({ success: true, chunks: totalChunks, pages: numPages })
+    return NextResponse.json({ success: true, chunks: totalChunks, pages: parsed.numpages })
   } catch (err) {
     await admin.from('documents').update({ status: 'error' }).eq('id', documentId)
     return NextResponse.json({ error: String(err) }, { status: 500 })
