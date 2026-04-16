@@ -15,7 +15,7 @@ interface Inquiry {
 }
 
 type StatusFilter = 'all' | 'open' | 'closed'
-type CategoryFilter = 'all' | '수업' | '행정' | '시설' | '기타'
+type CategoryFilter = 'all' | '교육' | '사업' | '예산' | '기타'
 
 const PAGE_SIZE = 20
 
@@ -44,9 +44,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function CategoryBadge({ category }: { category: string }) {
   const colors: Record<string, string> = {
-    '수업': 'bg-blue-50 text-blue-600',
-    '행정': 'bg-purple-50 text-purple-600',
-    '시설': 'bg-orange-50 text-orange-600',
+    '교육': 'bg-blue-50 text-blue-600',
+    '사업': 'bg-purple-50 text-purple-600',
+    '예산': 'bg-orange-50 text-orange-600',
     '기타': 'bg-gray-100 text-gray-600',
   }
   return (
@@ -103,7 +103,7 @@ export default function InquiryList() {
     { key: 'open', label: '답변대기' },
     { key: 'closed', label: '답변완료' },
   ]
-  const categories: CategoryFilter[] = ['all', '수업', '행정', '시설', '기타']
+  const categories: CategoryFilter[] = ['all', '교육', '사업', '예산', '기타']
 
   return (
     <div className="max-w-2xl mx-auto md:max-w-3xl pb-24">

@@ -23,9 +23,9 @@ const STATUS_LABEL: Record<string, string> = {
   open: '답변대기', in_progress: '처리중', closed: '답변완료',
 }
 const CAT_COLORS: Record<string, string> = {
-  '수업': 'bg-blue-50 text-blue-600',
-  '행정': 'bg-purple-50 text-purple-600',
-  '시설': 'bg-orange-50 text-orange-600',
+  '교육': 'bg-blue-50 text-blue-600',
+  '사업': 'bg-purple-50 text-purple-600',
+  '예산': 'bg-orange-50 text-orange-600',
   '기타': 'bg-gray-100 text-gray-600',
 }
 
@@ -117,7 +117,7 @@ export default function AdminInquiriesPage() {
           <select value={category} onChange={e => setCategory(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="all">전체 카테고리</option>
-            {['수업', '행정', '시설', '기타'].map(c => <option key={c} value={c}>{c}</option>)}
+            {['교육', '사업', '예산', '기타'].map(c => <option key={c} value={c}>{c}</option>)}
           </select>
 
           {/* 기관 */}

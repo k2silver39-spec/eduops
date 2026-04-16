@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
-const CATEGORIES = ['수업', '행정', '시설', '기타'] as const
+const CATEGORIES = ['교육', '사업', '예산', '기타'] as const
 type Category = typeof CATEGORIES[number]
 
 interface PendingFile {
@@ -21,7 +21,7 @@ function formatSize(bytes: number) {
 export default function NewInquiryPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    category: '수업' as Category,
+    category: '교육' as Category,
     title: '',
     content: '',
     is_public: true,
