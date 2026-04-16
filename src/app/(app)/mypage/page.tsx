@@ -20,6 +20,11 @@ export default function MyPage() {
   const [nameLoading, setNameLoading] = useState(false)
   const [nameMsg, setNameMsg] = useState('')
 
+  // Organization edit
+  const [editOrg, setEditOrg] = useState('')
+  const [orgLoading, setOrgLoading] = useState(false)
+  const [orgMsg, setOrgMsg] = useState('')
+
   // Password change
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
@@ -41,6 +46,7 @@ export default function MyPage() {
       if (data) {
         setProfile(data)
         setEditName(data.name)
+        setEditOrg(data.organization)
       }
       setLoading(false)
     }
@@ -66,6 +72,27 @@ export default function MyPage() {
     }
     setNameLoading(false)
     setTimeout(() => setNameMsg(''), 2500)
+  }
+
+  const handleOrgSave = async () => {
+    if (!editOrg.trim()) return
+    setOrgLoading(true)
+    setOrgMsg('')
+
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ organization: editOrg.trim() }),
+    })
+
+    if (!res.ok) {
+      setOrgMsg('저장에 실패했습니다.')
+    } else {
+      setProfile(prev => prev ? { ...prev, organization: editOrg.trim() } : prev)
+      setOrgMsg('저장되었습니다.')
+    }
+    setOrgLoading(false)
+    setTimeout(() => setOrgMsg(''), 2500)
   }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -129,8 +156,23 @@ export default function MyPage() {
             <p className="text-sm text-gray-700">{profile?.email}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400 mb-0.5">소속 기관</p>
-            <p className="text-sm text-gray-700">{profile?.organization}</p>
+            <p className="text-xs text-gray-400 mb-1">소속 기관</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={editOrg}
+                onChange={(e) => setEditOrg(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+              <button
+                onClick={handleOrgSave}
+                disabled={orgLoading || editOrg.trim() === profile?.organization}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
+              >
+                저장
+              </button>
+            </div>
+            {orgMsg && <p className="text-xs text-blue-600 mt-1.5">{orgMsg}</p>}
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-1">이름</p>
