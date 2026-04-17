@@ -44,6 +44,27 @@ function calcWeeklyPeriod(weeklyDate: string) {
   }
 }
 
+/** 해당 연월에 속하는 주(월요일 기준) 목록 반환 */
+function getWeeksInMonth(year: number, month: number): { value: string; label: string }[] {
+  const result: { value: string; label: string }[] = []
+  const firstDay = new Date(year, month - 1, 1)
+  let monday = getMondayOfWeek(firstDay)
+  let weekNum = 1
+  const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`
+  while (true) {
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    if (monday.getFullYear() > year || (monday.getFullYear() === year && monday.getMonth() + 1 > month)) break
+    if (!(sunday.getFullYear() < year || (sunday.getFullYear() === year && sunday.getMonth() + 1 < month))) {
+      result.push({ value: toDateStr(monday), label: `${weekNum}주차 (${fmt(monday)}~${fmt(sunday)})` })
+      weekNum++
+    }
+    monday = new Date(monday)
+    monday.setDate(monday.getDate() + 7)
+  }
+  return result
+}
+
 function calcMonthlyPeriod(year: number, month: number) {
   const lastDay = new Date(year, month, 0)
   return {
@@ -207,6 +228,14 @@ function WeeklyFormBody({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <tbody>
+              {value.org_info.agency_type && (
+                <tr>
+                  <td className={`${TH_BASE} w-36 text-center`}>기관구분</td>
+                  <td className={TD_BASE}>
+                    <input readOnly value={value.org_info.agency_type} className={readonlyCls} />
+                  </td>
+                </tr>
+              )}
               <tr>
                 <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
                 <td className={TD_BASE}>
@@ -371,6 +400,14 @@ function MonthlyFormBody({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <tbody>
+              {value.org_info.agency_type && (
+                <tr>
+                  <td className={`${TH_BASE} w-36 text-center`}>기관구분</td>
+                  <td className={TD_BASE}>
+                    <input readOnly value={value.org_info.agency_type} className={readonlyCls} />
+                  </td>
+                </tr>
+              )}
               <tr>
                 <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
                 <td className={TD_BASE}>
@@ -537,6 +574,7 @@ function MonthlyFormBody({
 interface UserProfile {
   name: string
   organization: string
+  agency_type?: string
 }
 
 interface ReportFormProps {
@@ -577,10 +615,10 @@ export default function ReportForm({
   const [monthlyMonth, setMonthlyMonth] = useState(initialMonthlyMonth ?? (today.getMonth() + 1))
 
   const [weekly, setWeekly] = useState<WeeklyContent>(
-    initialWeeklyContent ?? defaultWeekly(userProfile.organization, userProfile.name)
+    initialWeeklyContent ?? defaultWeekly(userProfile.organization, userProfile.name, userProfile.agency_type)
   )
   const [monthly, setMonthly] = useState<MonthlyContent>(
-    initialMonthlyContent ?? defaultMonthly(userProfile.organization, userProfile.name)
+    initialMonthlyContent ?? defaultMonthly(userProfile.organization, userProfile.name, userProfile.agency_type)
   )
 
   const [prevWeekly, setPrevWeekly] = useState<WeeklyContent | undefined>()
@@ -788,19 +826,34 @@ export default function ReportForm({
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <label className="block text-xs font-medium text-gray-500 mb-3">보고 기간</label>
           {mode === 'create' ? (
-            type === 'weekly' ? (
-              <div>
-                <input
-                  type="date"
-                  value={weeklyDate}
-                  onChange={(e) => { if (e.target.value) setWeeklyDate(e.target.value) }}
-                  className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  선택한 날짜의 주: <span className="font-medium text-gray-700">{period_label}</span>
-                </p>
-              </div>
-            ) : (
+            type === 'weekly' ? (() => {
+              const wd = new Date(weeklyDate + 'T00:00:00')
+              const wy = wd.getFullYear()
+              const wm = wd.getMonth() + 1
+              const weeks = getWeeksInMonth(wy, wm)
+              const selectCls = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
+              return (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <select value={wy} onChange={(e) => {
+                    const ny = Number(e.target.value)
+                    const nw = getWeeksInMonth(ny, wm)
+                    if (nw.length > 0) setWeeklyDate(nw[0].value)
+                  }} className={selectCls}>
+                    {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}년</option>)}
+                  </select>
+                  <select value={wm} onChange={(e) => {
+                    const nm = Number(e.target.value)
+                    const nw = getWeeksInMonth(wy, nm)
+                    if (nw.length > 0) setWeeklyDate(nw[0].value)
+                  }} className={selectCls}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}월</option>)}
+                  </select>
+                  <select value={weeklyDate} onChange={(e) => setWeeklyDate(e.target.value)} className={selectCls}>
+                    {weeks.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+                  </select>
+                </div>
+              )
+            })() : (
               <div className="flex gap-2 flex-wrap">
                 <select
                   value={monthlyYear}

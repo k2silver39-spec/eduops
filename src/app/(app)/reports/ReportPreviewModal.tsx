@@ -37,6 +37,12 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
         <h3 className="text-xs font-bold text-gray-700 mb-1 border-b border-gray-400 pb-0.5">1. 수행기관 정보</h3>
         <table className="w-full border-collapse text-xs">
           <tbody>
+            {org_info.agency_type && (
+              <tr>
+                <td className={`${TH} w-36`}>기관구분</td>
+                <td className={TD}>{org_info.agency_type}</td>
+              </tr>
+            )}
             <tr>
               <td className={`${TH} w-36`}>운영기관</td>
               <td className={TD}>{org_info.operator || '—'}</td>
@@ -125,6 +131,12 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
         <h3 className="text-xs font-bold text-gray-700 mb-1 border-b border-gray-400 pb-0.5">1. 수행기관 정보</h3>
         <table className="w-full border-collapse text-xs">
           <tbody>
+            {org_info.agency_type && (
+              <tr>
+                <td className={`${TH} w-36`}>기관구분</td>
+                <td className={TD}>{org_info.agency_type}</td>
+              </tr>
+            )}
             <tr>
               <td className={`${TH} w-36`}>운영기관</td>
               <td className={TD}>{org_info.operator || '—'}</td>

@@ -11,7 +11,7 @@ export default async function NewReportPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('name, organization, status')
+    .select('name, organization, agency_type, status')
     .eq('id', user.id)
     .single()
 
@@ -20,7 +20,7 @@ export default async function NewReportPage() {
   return (
     <ReportForm
       mode="create"
-      userProfile={{ name: profile.name, organization: profile.organization }}
+      userProfile={{ name: profile.name, organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
     />
   )
 }

@@ -33,7 +33,7 @@ export default async function EditReportPage({
   const admin = createAdminClient()
   const [{ data: report }, { data: profile }] = await Promise.all([
     admin.from('reports').select('*').eq('id', id).single(),
-    admin.from('profiles').select('name, organization').eq('id', user.id).single(),
+    admin.from('profiles').select('name, organization, agency_type').eq('id', user.id).single(),
   ])
 
   if (!report || !profile) notFound()
@@ -68,7 +68,7 @@ export default async function EditReportPage({
       initialWeeklyContent={type === 'weekly' ? content as WeeklyContent : undefined}
       initialMonthlyContent={type === 'monthly' ? content as MonthlyContent : undefined}
       forceAllowSubmit={isResubmit}
-      userProfile={{ name: profile.name, organization: profile.organization }}
+      userProfile={{ name: profile.name, organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
     />
   )
 }

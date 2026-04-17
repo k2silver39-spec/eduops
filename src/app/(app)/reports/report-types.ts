@@ -8,6 +8,7 @@ export type ReportStatus = 'draft' | 'submitted' | 'revision_requested' | 'revis
 
 // 수행기관 정보
 export interface OrgInfo {
+  agency_type?: string       // 기관구분 (profile.agency_type 자동입력)
   operator: string          // 운영기관명 (profile.organization 자동입력)
   operator_name: string     // 담당자 성명 (profile.name 자동입력)
   operator_position: string // 직위 (주간: '실무담당자', 월간: '사업책임자')
@@ -107,10 +108,11 @@ export function calcBudgetSubtotal(a: BudgetEntry, b: BudgetEntry) {
 }
 
 /** 기본 WeeklyContent 생성 */
-export function defaultWeekly(org: string, name: string): WeeklyContent {
+export function defaultWeekly(org: string, name: string, agencyType?: string): WeeklyContent {
   return {
     version: 2,
     org_info: {
+      agency_type: agencyType,
       operator: org,
       operator_name: name,
       operator_position: '실무담당자',
@@ -121,11 +123,12 @@ export function defaultWeekly(org: string, name: string): WeeklyContent {
 }
 
 /** 기본 MonthlyContent 생성 */
-export function defaultMonthly(org: string, name: string): MonthlyContent {
+export function defaultMonthly(org: string, name: string, agencyType?: string): MonthlyContent {
   const emptyBudget: BudgetEntry = { budget: '', executed: '' }
   return {
     version: 2,
     org_info: {
+      agency_type: agencyType,
       operator: org,
       operator_name: name,
       operator_position: '사업책임자',

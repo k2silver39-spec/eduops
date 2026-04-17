@@ -76,6 +76,12 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full border-collapse">
             <tbody>
+              {org_info.agency_type && (
+                <tr>
+                  <td className={`${TH} w-36`}>기관구분</td>
+                  <td className={TD}>{org_info.agency_type}</td>
+                </tr>
+              )}
               <tr>
                 <td className={`${TH} w-36`}>운영기관</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
@@ -170,6 +176,12 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full border-collapse">
             <tbody>
+              {org_info.agency_type && (
+                <tr>
+                  <td className={`${TH} w-36`}>기관구분</td>
+                  <td className={TD}>{org_info.agency_type}</td>
+                </tr>
+              )}
               <tr>
                 <td className={`${TH} w-36`}>운영기관</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
