@@ -2,21 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import ReportForm from '../../ReportForm'
-import type { WeeklyContent, MonthlyContent, ReportType } from '../../ReportForm'
+import type { ReportType, WeeklyContent, MonthlyContent } from '../../report-types'
 
 function getMondayOfWeek(date: Date): Date {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
   return d
 }
 
 function toDateStr(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 export default async function EditReportPage({
@@ -35,33 +31,24 @@ export default async function EditReportPage({
   if (!user) redirect('/auth/login')
 
   const admin = createAdminClient()
-  const { data: report } = await admin
-    .from('reports')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: report }, { data: profile }] = await Promise.all([
+    admin.from('reports').select('*').eq('id', id).single(),
+    admin.from('profiles').select('name, organization').eq('id', user.id).single(),
+  ])
 
-  if (!report) notFound()
-
-  // 본인 보고서만 수정 가능
+  if (!report || !profile) notFound()
   if (report.user_id !== user.id) notFound()
 
-  // 상태에 따른 접근 제어
-  const allowedStatuses = isResubmit
-    ? ['revision_approved']
-    : ['draft', 'submitted']
-
+  const allowedStatuses = isResubmit ? ['revision_approved'] : ['draft', 'submitted']
   if (!allowedStatuses.includes(report.status)) redirect(`/reports/${id}`)
 
-  // 기간 파싱
   const type = report.type as ReportType
   let initialWeeklyDate: string | undefined
   let initialMonthlyYear: number | undefined
   let initialMonthlyMonth: number | undefined
 
   if (type === 'weekly') {
-    const monday = getMondayOfWeek(new Date(report.period_start + 'T00:00:00'))
-    initialWeeklyDate = toDateStr(monday)
+    initialWeeklyDate = toDateStr(getMondayOfWeek(new Date(report.period_start + 'T00:00:00')))
   } else {
     const d = new Date(report.period_start + 'T00:00:00')
     initialMonthlyYear = d.getFullYear()
@@ -81,6 +68,7 @@ export default async function EditReportPage({
       initialWeeklyContent={type === 'weekly' ? content as WeeklyContent : undefined}
       initialMonthlyContent={type === 'monthly' ? content as MonthlyContent : undefined}
       forceAllowSubmit={isResubmit}
+      userProfile={{ name: profile.name, organization: profile.organization }}
     />
   )
 }

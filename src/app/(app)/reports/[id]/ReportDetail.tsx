@@ -2,24 +2,35 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  WeeklyContent, MonthlyContent,
+  KPI_LABELS, ACTIVITY_LABELS,
+  calcRate, calcBudgetRow, calcBudgetSubtotal, fmtNum,
+  ReportStatus,
+} from '../report-types'
 
-type ReportStatus = 'draft' | 'submitted' | 'revision_requested' | 'revision_approved'
-
-interface InProgressItem { task: string; progress: number }
-interface GoalItem { goal: string; achievement_rate: number }
-
-interface WeeklyContent {
-  completed: string
-  in_progress: InProgressItem[]
-  next_plan: string
-  issues?: string
+const STATUS_CONFIG: Record<ReportStatus, { label: string; cls: string }> = {
+  draft:              { label: '임시저장',  cls: 'bg-gray-100 text-gray-600' },
+  submitted:          { label: '제출완료',  cls: 'bg-green-100 text-green-700' },
+  revision_requested: { label: '수정요청',  cls: 'bg-red-100 text-red-600' },
+  revision_approved:  { label: '수정승인',  cls: 'bg-blue-100 text-blue-700' },
 }
 
-interface MonthlyContent {
-  achievements: string
-  goals: GoalItem[]
-  next_month_plan: string
-  issues?: string
+function isPastDeadline(periodEnd: string) {
+  return new Date().toISOString().split('T')[0] > periodEnd
+}
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
 
 interface Report {
@@ -38,138 +49,293 @@ interface Report {
   author: { name: string } | null
 }
 
-const STATUS_CONFIG: Record<ReportStatus, { label: string; cls: string }> = {
-  draft:              { label: '임시저장', cls: 'bg-gray-100 text-gray-600' },
-  submitted:          { label: '제출완료', cls: 'bg-green-100 text-green-700' },
-  revision_requested: { label: '수정요청', cls: 'bg-red-100 text-red-600' },
-  revision_approved:  { label: '수정승인', cls: 'bg-blue-100 text-blue-700' },
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('ko-KR', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-function isPastDeadline(periodEnd: string): boolean {
-  return new Date().toISOString().split('T')[0] > periodEnd
-}
-
 interface Attachment {
-  id: string
-  filename: string
-  size: number
-  created_at: string
+  id: string; filename: string; size: number; created_at: string
 }
 
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes}B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
-}
+// ─────────────────────────────────────────────────
+// 테이블 셀
+// ─────────────────────────────────────────────────
+const TH = 'border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 text-center'
+const TD = 'border border-gray-200 px-3 py-2 text-xs text-gray-800'
+const TDC = `${TD} text-center`
+const TDR = `${TD} text-right tabular-nums`
 
-function ProgressBar({ value }: { value: number }) {
+// ─────────────────────────────────────────────────
+// Weekly 상세 뷰
+// ─────────────────────────────────────────────────
+function WeeklyDetail({ content }: { content: WeeklyContent }) {
+  const { org_info, kpi_rows, activity_rows } = content
+
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-blue-500 rounded-full transition-all"
-          style={{ width: `${value}%` }}
-        />
+    <div className="space-y-5">
+      {/* 수행기관 정보 */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">수행기관 정보</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full border-collapse min-w-[360px]">
+            <tbody>
+              <tr>
+                <td className={`${TH} w-28`}>운영기관</td>
+                <td className={TD}>{org_info.operator || '—'}</td>
+                <td className={`${TH} w-24`}>협력기관①</td>
+                <td className={TD}>{org_info.partner1 || '—'}</td>
+              </tr>
+              <tr>
+                <td className={TH}>실무담당자</td>
+                <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
+                <td className={TH}>협력기관②</td>
+                <td className={TD}>{org_info.partner2 || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* KPI */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">성과지표 달성 현황</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full border-collapse min-w-[360px]">
+            <thead>
+              <tr>
+                <th className={`${TH} w-28`}>지표명</th>
+                <th className={`${TH}`}>목표(A)</th>
+                <th className={`${TH}`}>실적(B)</th>
+                <th className={`${TH} w-20`}>달성률</th>
+              </tr>
+            </thead>
+            <tbody>
+              {KPI_LABELS.map((label, i) => {
+                const row = kpi_rows[i] ?? { target: '', actual: '' }
+                return (
+                  <tr key={label}>
+                    <td className={`${TH} font-medium`}>{label}</td>
+                    <td className={TDC}>{fmtNum(row.target) || '—'}</td>
+                    <td className={TDC}>{fmtNum(row.actual) || '—'}</td>
+                    <td className={`${TDC} font-semibold text-blue-600`}>{calcRate(row.target, row.actual)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 주간 실적 및 계획 */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">주간 실적 및 계획</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full border-collapse min-w-[480px]">
+            <thead>
+              <tr>
+                <th className={`${TH} w-20`}>구분</th>
+                <th className={TH}>이번주 실적</th>
+                <th className={TH}>다음주 계획</th>
+                <th className={`${TH} w-24`}>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ACTIVITY_LABELS.map((label, i) => {
+                const row = activity_rows[i] ?? { current_week: '', next_week: '', note: '' }
+                return (
+                  <tr key={label}>
+                    <td className={`${TH} font-medium`}>{label}</td>
+                    <td className={`${TD} whitespace-pre-wrap align-top`}>{row.current_week || '—'}</td>
+                    <td className={`${TD} whitespace-pre-wrap align-top`}>{row.next_week || '—'}</td>
+                    <td className={TD}>{row.note || '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────
+// Monthly 상세 뷰
+// ─────────────────────────────────────────────────
+function MonthlyDetail({ content }: { content: MonthlyContent }) {
+  const { org_info, quantitative, qualitative, achievement_plan, budget, budget_plan } = content
+
+  const opGov   = calcBudgetRow(budget.operator_gov)
+  const opSelf  = calcBudgetRow(budget.operator_self)
+  const p1Gov   = calcBudgetRow(budget.partner1_gov)
+  const p1Self  = calcBudgetRow(budget.partner1_self)
+  const opTotal = calcBudgetSubtotal(budget.operator_gov, budget.operator_self)
+  const p1Total = calcBudgetSubtotal(budget.partner1_gov, budget.partner1_self)
+  const grandB  = opTotal.budget   + p1Total.budget
+  const grandE  = opTotal.executed + p1Total.executed
+  const grandR  = grandB - grandE
+  const grandRate = grandB > 0 ? `${((grandE / grandB) * 100).toFixed(1)}%` : '—'
+
+  return (
+    <div className="space-y-5">
+      {/* 수행기관 정보 */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">수행기관 정보</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full border-collapse min-w-[360px]">
+            <tbody>
+              <tr>
+                <td className={`${TH} w-28`}>운영기관</td>
+                <td className={TD}>{org_info.operator || '—'}</td>
+                <td className={`${TH} w-24`}>협력기관①</td>
+                <td className={TD}>{org_info.partner1 || '—'}</td>
+              </tr>
+              <tr>
+                <td className={TH}>사업책임자</td>
+                <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
+                <td className={TH}>협력기관②</td>
+                <td className={TD}>{org_info.partner2 || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 정량/정성 실적 */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">정량 및 정성 실적</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200 mb-3">
+          <table className="w-full border-collapse min-w-[320px]">
+            <thead>
+              <tr>
+                <th className={`${TH} w-24`}>구분</th>
+                <th className={TH}>목표(A)</th>
+                <th className={TH}>실적(B)</th>
+                <th className={`${TH} w-20`}>달성률</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={`${TH} font-medium`}>정량실적</td>
+                <td className={TDC}>{fmtNum(quantitative.target) || '—'}</td>
+                <td className={TDC}>{fmtNum(quantitative.actual) || '—'}</td>
+                <td className={`${TDC} font-semibold text-blue-600`}>{calcRate(quantitative.target, quantitative.actual)}</td>
+              </tr>
+              <tr>
+                <td className={`${TH} font-medium`}>정성실적</td>
+                <td className={TDC}>{fmtNum(qualitative.target) || '—'}</td>
+                <td className={TDC}>{fmtNum(qualitative.actual) || '—'}</td>
+                <td className={`${TDC} font-semibold text-blue-600`}>{calcRate(qualitative.target, qualitative.actual)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {achievement_plan && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">향후목표 달성계획</p>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">{achievement_plan}</p>
+          </div>
+        )}
+      </section>
+
+      {/* 예산 집행현황 */}
+      <section>
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">예산 집행현황</h3>
+        <div className="overflow-x-auto rounded-lg border border-gray-200 mb-3">
+          <table className="w-full border-collapse min-w-[440px]">
+            <thead>
+              <tr>
+                <th className={`${TH} w-36`}>구분</th>
+                <th className={TH}>예산</th>
+                <th className={TH}>집행액</th>
+                <th className={TH}>집행잔액</th>
+                <th className={`${TH} w-16`}>집행률</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-blue-50">
+                <td className={`${TH} font-bold text-blue-700`}>합계</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{grandB ? grandB.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{grandE ? grandE.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{grandB ? grandR.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-bold text-blue-700`}>{grandRate}</td>
+              </tr>
+              <tr>
+                <td className={TH}>운영기관 국고보조금</td>
+                <td className={TDR}>{fmtNum(budget.operator_gov.budget) || '—'}</td>
+                <td className={TDR}>{fmtNum(budget.operator_gov.executed) || '—'}</td>
+                <td className={TDR}>{opGov.budget ? opGov.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{opGov.rate}</td>
+              </tr>
+              <tr>
+                <td className={TH}>운영기관 자기부담금</td>
+                <td className={TDR}>{fmtNum(budget.operator_self.budget) || '—'}</td>
+                <td className={TDR}>{fmtNum(budget.operator_self.executed) || '—'}</td>
+                <td className={TDR}>{opSelf.budget ? opSelf.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{opSelf.rate}</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className={`${TH} font-semibold`}>운영기관 합계</td>
+                <td className={TDR}>{opTotal.budget ? opTotal.budget.toLocaleString('ko-KR') : '—'}</td>
+                <td className={TDR}>{opTotal.executed ? opTotal.executed.toLocaleString('ko-KR') : '—'}</td>
+                <td className={TDR}>{opTotal.budget ? opTotal.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{opTotal.rate}</td>
+              </tr>
+              <tr>
+                <td className={TH}>협력기관① 국고보조금</td>
+                <td className={TDR}>{fmtNum(budget.partner1_gov.budget) || '—'}</td>
+                <td className={TDR}>{fmtNum(budget.partner1_gov.executed) || '—'}</td>
+                <td className={TDR}>{p1Gov.budget ? p1Gov.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{p1Gov.rate}</td>
+              </tr>
+              <tr>
+                <td className={TH}>협력기관① 자기부담금</td>
+                <td className={TDR}>{fmtNum(budget.partner1_self.budget) || '—'}</td>
+                <td className={TDR}>{fmtNum(budget.partner1_self.executed) || '—'}</td>
+                <td className={TDR}>{p1Self.budget ? p1Self.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{p1Self.rate}</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className={`${TH} font-semibold`}>협력기관① 합계</td>
+                <td className={TDR}>{p1Total.budget ? p1Total.budget.toLocaleString('ko-KR') : '—'}</td>
+                <td className={TDR}>{p1Total.executed ? p1Total.executed.toLocaleString('ko-KR') : '—'}</td>
+                <td className={TDR}>{p1Total.budget ? p1Total.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-medium text-blue-600`}>{p1Total.rate}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {budget_plan && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">향후예산 활용계획</p>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">{budget_plan}</p>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────
+// 구버전(v1) fallback
+// ─────────────────────────────────────────────────
+function LegacyDetail({ content, type }: { content: Record<string, unknown>; type: 'weekly' | 'monthly' }) {
+  if (type === 'weekly') {
+    return (
+      <div className="space-y-4 text-sm text-gray-700">
+        {!!content.completed && <div><p className="text-xs font-semibold text-gray-400 mb-1">완료 업무</p><p className="whitespace-pre-wrap bg-gray-50 rounded-xl px-4 py-3">{String(content.completed)}</p></div>}
+        {!!content.next_plan && <div><p className="text-xs font-semibold text-gray-400 mb-1">다음주 계획</p><p className="whitespace-pre-wrap bg-gray-50 rounded-xl px-4 py-3">{String(content.next_plan)}</p></div>}
+        {!!content.issues && <div><p className="text-xs font-semibold text-gray-400 mb-1">이슈</p><p className="whitespace-pre-wrap bg-gray-50 rounded-xl px-4 py-3">{String(content.issues)}</p></div>}
       </div>
-      <span className="text-sm font-semibold text-blue-600 w-10 text-right tabular-nums">{value}%</span>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+    )
+  }
   return (
-    <div>
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{title}</h3>
-      {children}
+    <div className="space-y-4 text-sm text-gray-700">
+      {!!content.achievements && <div><p className="text-xs font-semibold text-gray-400 mb-1">주요 성과</p><p className="whitespace-pre-wrap bg-gray-50 rounded-xl px-4 py-3">{String(content.achievements)}</p></div>}
+      {!!content.next_month_plan && <div><p className="text-xs font-semibold text-gray-400 mb-1">다음 달 목표</p><p className="whitespace-pre-wrap bg-gray-50 rounded-xl px-4 py-3">{String(content.next_month_plan)}</p></div>}
     </div>
   )
 }
 
-function WeeklyView({ content }: { content: WeeklyContent }) {
-  return (
-    <div className="space-y-5">
-      <Section title="이번 주 완료 업무">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-          {content.completed || <span className="text-gray-400">-</span>}
-        </p>
-      </Section>
-
-      {content.in_progress.length > 0 && (
-        <Section title="진행 중 업무">
-          <div className="space-y-3">
-            {content.in_progress.map((item, i) => (
-              <div key={i} className="bg-gray-50 rounded-xl px-4 py-3">
-                <p className="text-sm font-medium text-gray-800 mb-2">{item.task || '(업무명 없음)'}</p>
-                <ProgressBar value={item.progress} />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section title="다음 주 계획">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-          {content.next_plan || <span className="text-gray-400">-</span>}
-        </p>
-      </Section>
-
-      {content.issues && (
-        <Section title="이슈 및 건의사항">
-          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-            {content.issues}
-          </p>
-        </Section>
-      )}
-    </div>
-  )
-}
-
-function MonthlyView({ content }: { content: MonthlyContent }) {
-  return (
-    <div className="space-y-5">
-      <Section title="월간 주요 성과">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-          {content.achievements || <span className="text-gray-400">-</span>}
-        </p>
-      </Section>
-
-      {content.goals.length > 0 && (
-        <Section title="목표 달성도">
-          <div className="space-y-3">
-            {content.goals.map((item, i) => (
-              <div key={i} className="bg-gray-50 rounded-xl px-4 py-3">
-                <p className="text-sm font-medium text-gray-800 mb-2">{item.goal || '(목표명 없음)'}</p>
-                <ProgressBar value={item.achievement_rate} />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section title="다음 달 목표">
-        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-          {content.next_month_plan || <span className="text-gray-400">-</span>}
-        </p>
-      </Section>
-
-      {content.issues && (
-        <Section title="특이사항/건의">
-          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-            {content.issues}
-          </p>
-        </Section>
-      )}
-    </div>
-  )
-}
-
+// ─────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────
 export default function ReportDetail({
   report: initial,
   attachments,
@@ -183,8 +349,6 @@ export default function ReportDetail({
 }) {
   const router = useRouter()
   const [report, setReport] = useState(initial)
-
-  // 수정 요청 모달
   const [showRevisionModal, setShowRevisionModal] = useState(false)
   const [revisionReason, setRevisionReason] = useState('')
   const [revisionLoading, setRevisionLoading] = useState(false)
@@ -192,6 +356,9 @@ export default function ReportDetail({
   const isOwner = report.user_id === currentUserId
   const pastDeadline = isPastDeadline(report.period_end)
   const cfg = STATUS_CONFIG[report.status]
+
+  const content = report.content as unknown as Record<string, unknown>
+  const isV2 = content?.version === 2
 
   const handleRevisionRequest = async () => {
     if (!revisionReason.trim()) return
@@ -202,8 +369,7 @@ export default function ReportDetail({
       body: JSON.stringify({ status: 'revision_requested', revision_reason: revisionReason.trim() }),
     })
     if (res.ok) {
-      const data = await res.json()
-      setReport(data)
+      setReport(await res.json())
       setShowRevisionModal(false)
       setRevisionReason('')
     }
@@ -211,13 +377,10 @@ export default function ReportDetail({
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4 py-6">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-        >
+        <button onClick={() => router.back()} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
@@ -229,8 +392,13 @@ export default function ReportDetail({
       <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-base font-semibold text-gray-900">{report.period_label}</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${report.type === 'weekly' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                {report.type === 'weekly' ? '주간' : '월간'}
+              </span>
+              <p className="text-base font-semibold text-gray-900">{report.period_label}</p>
+            </div>
+            <p className="text-xs text-gray-400">
               {report.author?.name}
               {report.submitted_at ? ` · 제출: ${formatDate(report.submitted_at)}` : ''}
             </p>
@@ -240,7 +408,6 @@ export default function ReportDetail({
           </span>
         </div>
 
-        {/* 수정 요청 사유 */}
         {report.status === 'revision_requested' && report.revision_reason && (
           <div className="mt-4 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
             <p className="text-xs font-medium text-red-600 mb-1">수정 요청 사유</p>
@@ -251,9 +418,11 @@ export default function ReportDetail({
 
       {/* 보고서 내용 */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
-        {report.type === 'weekly'
-          ? <WeeklyView content={report.content as WeeklyContent} />
-          : <MonthlyView content={report.content as MonthlyContent} />
+        {isV2
+          ? report.type === 'weekly'
+            ? <WeeklyDetail content={report.content as WeeklyContent} />
+            : <MonthlyDetail content={report.content as MonthlyContent} />
+          : <LegacyDetail content={content} type={report.type} />
         }
       </div>
 
@@ -263,13 +432,8 @@ export default function ReportDetail({
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">첨부파일 ({attachments.length})</p>
           <div className="space-y-1.5">
             {attachments.map((a) => (
-              <a
-                key={a.id}
-                href={`/api/attachments/${a.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-lg transition-colors group"
-              >
+              <a key={a.id} href={`/api/attachments/${a.id}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-lg transition-colors group">
                 <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
                 </svg>
@@ -281,45 +445,30 @@ export default function ReportDetail({
         </div>
       )}
 
-      {/* 액션 버튼 (본인 보고서) */}
+      {/* 액션 버튼 (본인) */}
       {isOwner && (
         <div className="space-y-2">
-          {/* submitted + 마감 전 → 수정하기 */}
           {report.status === 'submitted' && !pastDeadline && (
-            <button
-              onClick={() => router.push(`/reports/${report.id}/edit`)}
-              className="w-full bg-white border border-gray-300 text-gray-700 font-medium py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors"
-            >
+            <button onClick={() => router.push(`/reports/${report.id}/edit`)}
+              className="w-full bg-white border border-gray-300 text-gray-700 font-medium py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors">
               수정하기
             </button>
           )}
-
-          {/* submitted + 마감 후 → 수정 요청 */}
           {report.status === 'submitted' && pastDeadline && (
-            <button
-              onClick={() => setShowRevisionModal(true)}
-              className="w-full bg-white border border-red-200 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 transition-colors"
-            >
+            <button onClick={() => setShowRevisionModal(true)}
+              className="w-full bg-white border border-red-200 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 transition-colors">
               수정 요청
             </button>
           )}
-
-          {/* revision_approved → 재제출하기 */}
           {report.status === 'revision_approved' && (
-            <button
-              onClick={() => router.push(`/reports/${report.id}/edit?resubmit=1`)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors"
-            >
+            <button onClick={() => router.push(`/reports/${report.id}/edit?resubmit=1`)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
               재제출하기
             </button>
           )}
-
-          {/* draft → 이어서 작성 */}
           {report.status === 'draft' && (
-            <button
-              onClick={() => router.push(`/reports/${report.id}/edit`)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors"
-            >
+            <button onClick={() => router.push(`/reports/${report.id}/edit`)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
               이어서 작성
             </button>
           )}
@@ -341,17 +490,10 @@ export default function ReportDetail({
               autoFocus
             />
             <div className="flex gap-2">
-              <button
-                onClick={() => { setShowRevisionModal(false); setRevisionReason('') }}
-                className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleRevisionRequest}
-                disabled={revisionLoading || !revisionReason.trim()}
-                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2.5 rounded-xl text-sm transition-colors"
-              >
+              <button onClick={() => { setShowRevisionModal(false); setRevisionReason('') }}
+                className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">취소</button>
+              <button onClick={handleRevisionRequest} disabled={revisionLoading || !revisionReason.trim()}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">
                 {revisionLoading ? '요청 중...' : '요청 전송'}
               </button>
             </div>
