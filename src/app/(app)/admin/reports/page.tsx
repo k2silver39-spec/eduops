@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-type PageTab = 'list' | 'revision' | 'summary'
+type PageTab = 'list' | 'pending' | 'summary'
 
 interface Report {
   id: string
@@ -12,6 +12,7 @@ interface Report {
   period_label: string
   status: string
   revision_reason: string | null
+  revision_comment: string | null
   submitted_at: string | null
   created_at: string
   organization: string
@@ -21,11 +22,18 @@ interface Report {
 const STATUS_BADGE: Record<string, string> = {
   draft:              'bg-gray-100 text-gray-600',
   submitted:          'bg-green-100 text-green-700',
+  approved:           'bg-emerald-100 text-emerald-700',
   revision_requested: 'bg-red-100 text-red-600',
-  revision_approved:  'bg-blue-100 text-blue-700',
+  resubmitted:        'bg-blue-100 text-blue-700',
+  revision_approved:  'bg-amber-100 text-amber-600',
 }
 const STATUS_LABEL: Record<string, string> = {
-  draft: '임시저장', submitted: '제출완료', revision_requested: '수정요청', revision_approved: '수정승인',
+  draft: '임시저장',
+  submitted: '제출완료',
+  approved: '승인',
+  revision_requested: '정정요청',
+  resubmitted: '재제출',
+  revision_approved: '재제출 필요',
 }
 
 function formatDate(d: string | null) {
@@ -51,10 +59,10 @@ export default function AdminReportsPage() {
   const [orgFilter, setOrgFilter] = useState('all')
   const [orgs, setOrgs] = useState<string[]>([])
 
-  // 수정 요청 탭 상태
-  const [revisions, setRevisions] = useState<Report[]>([])
-  const [revLoading, setRevLoading] = useState(false)
-  const [confirm, setConfirm] = useState<{ id: string; action: 'approve' | 'reject'; name: string } | null>(null)
+  // 승인 대기 탭 상태
+  const [pending, setPending] = useState<Report[]>([])
+  const [pendLoading, setPendLoading] = useState(false)
+  const [confirm, setConfirm] = useState<{ id: string; action: 'approve'; name: string } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
   // AI 요약 탭 상태
@@ -87,29 +95,32 @@ export default function AdminReportsPage() {
 
   useEffect(() => { if (tab === 'list') fetchReports() }, [tab, fetchReports])
 
-  // 수정 요청 탭
-  const fetchRevisions = useCallback(async () => {
-    setRevLoading(true)
-    const res = await fetch('/api/admin/reports?status=revision_requested')
-    const data = await res.json()
-    setRevisions(data)
-    setRevLoading(false)
+  // 승인 대기 탭 (submitted + resubmitted)
+  const fetchPending = useCallback(async () => {
+    setPendLoading(true)
+    const [r1, r2] = await Promise.all([
+      fetch('/api/admin/reports?status=submitted').then(r => r.json()),
+      fetch('/api/admin/reports?status=resubmitted').then(r => r.json()),
+    ])
+    const merged: Report[] = [...(Array.isArray(r1) ? r1 : []), ...(Array.isArray(r2) ? r2 : [])]
+    merged.sort((a, b) => (b.submitted_at ?? b.created_at).localeCompare(a.submitted_at ?? a.created_at))
+    setPending(merged)
+    setPendLoading(false)
   }, [])
 
-  useEffect(() => { if (tab === 'revision') fetchRevisions() }, [tab, fetchRevisions])
+  useEffect(() => { if (tab === 'pending') fetchPending() }, [tab, fetchPending])
 
-  const doRevisionAction = async () => {
+  const doApprove = async () => {
     if (!confirm) return
     setActionLoading(true)
-    const newStatus = confirm.action === 'approve' ? 'revision_approved' : 'submitted'
     await fetch(`/api/admin/reports/${confirm.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({ status: 'approved' }),
     })
     setConfirm(null)
     setActionLoading(false)
-    fetchRevisions()
+    fetchPending()
   }
 
   const doSummary = async () => {
@@ -133,10 +144,13 @@ export default function AdminReportsPage() {
 
       {/* 탭 */}
       <div className="flex gap-1 mb-5">
-        {([['list', '보고서 목록'], ['revision', '수정 요청'], ['summary', 'AI 요약']] as [PageTab, string][]).map(([t, label]) => (
+        {([['list', '보고서 목록'], ['pending', '승인 대기'], ['summary', 'AI 요약']] as [PageTab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-200'}`}>
             {label}
+            {t === 'pending' && pending.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold">{pending.length}</span>
+            )}
           </button>
         ))}
       </div>
@@ -149,8 +163,9 @@ export default function AdminReportsPage() {
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="all">전체 상태</option>
               <option value="submitted">제출완료</option>
-              <option value="revision_requested">수정요청</option>
-              <option value="revision_approved">수정승인</option>
+              <option value="approved">승인</option>
+              <option value="revision_requested">정정요청</option>
+              <option value="resubmitted">재제출</option>
               <option value="draft">임시저장</option>
             </select>
             <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
@@ -213,46 +228,47 @@ export default function AdminReportsPage() {
         </>
       )}
 
-      {/* ── 수정 요청 탭 ── */}
-      {tab === 'revision' && (
+      {/* ── 승인 대기 탭 ── */}
+      {tab === 'pending' && (
         <div className="space-y-3">
-          {revLoading ? (
+          {pendLoading ? (
             <div className="text-center py-10 text-sm text-gray-400">불러오는 중...</div>
-          ) : revisions.length === 0 ? (
+          ) : pending.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-sm text-gray-400">
-              수정 요청이 없습니다.
+              승인 대기 중인 보고서가 없습니다.
             </div>
-          ) : revisions.map((r) => (
-            <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-4">
+          ) : pending.map((r) => (
+            <div key={r.id} className={`bg-white border rounded-xl p-4 ${r.status === 'resubmitted' ? 'border-blue-200' : 'border-gray-200'}`}>
               <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${r.type === 'weekly' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                       {r.type === 'weekly' ? '주간' : '월간'}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {STATUS_LABEL[r.status] ?? r.status}
                     </span>
                     <Link href={`/reports/${r.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
                       {r.period_label}
                     </Link>
                   </div>
                   <p className="text-xs text-gray-500">
-                    {(r.author as { name: string } | null)?.name} · {r.organization} · {formatDate(r.submitted_at)}
+                    {(r.author as { name: string } | null)?.name} · {r.organization} · 제출 {formatDate(r.submitted_at)}
                   </p>
-                  {r.revision_reason && (
-                    <div className="mt-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                      <p className="text-xs font-medium text-red-600 mb-0.5">수정 요청 사유</p>
-                      <p className="text-sm text-red-700">{r.revision_reason}</p>
-                    </div>
-                  )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
+                  <Link
+                    href={`/reports/${r.id}`}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    검토
+                  </Link>
                   <button
                     onClick={() => setConfirm({ id: r.id, action: 'approve', name: (r.author as { name: string } | null)?.name ?? '' })}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                  >승인</button>
-                  <button
-                    onClick={() => setConfirm({ id: r.id, action: 'reject', name: (r.author as { name: string } | null)?.name ?? '' })}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                  >거절</button>
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    승인
+                  </button>
                 </div>
               </div>
             </div>
@@ -339,20 +355,18 @@ export default function AdminReportsPage() {
         </div>
       )}
 
-      {/* 확인 모달 */}
+      {/* 승인 확인 모달 */}
       {confirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-5">
             <p className="text-sm font-medium text-gray-900 mb-5">
-              {confirm.action === 'approve'
-                ? `${confirm.name}님의 수정 요청을 승인하시겠습니까?`
-                : `${confirm.name}님의 수정 요청을 거절하시겠습니까?`}
+              {confirm.name}님의 보고서를 승인하시겠습니까?
             </p>
             <div className="flex gap-2">
               <button onClick={() => setConfirm(null)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50">취소</button>
-              <button onClick={doRevisionAction} disabled={actionLoading}
-                className={`flex-1 font-medium py-2.5 rounded-xl text-sm text-white transition-colors ${confirm.action === 'approve' ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400' : 'bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400'}`}>
-                {actionLoading ? '처리 중...' : '확인'}
+              <button onClick={doApprove} disabled={actionLoading}
+                className="flex-1 font-medium py-2.5 rounded-xl text-sm text-white transition-colors bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400">
+                {actionLoading ? '처리 중...' : '승인'}
               </button>
             </div>
           </div>

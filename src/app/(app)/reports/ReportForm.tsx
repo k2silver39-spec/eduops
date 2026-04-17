@@ -826,7 +826,7 @@ export default function ReportForm({
   const canSubmit = !pastDeadline || forceAllowSubmit
 
   // ── 저장/제출
-  const doSave = async (saveStatus: 'draft' | 'submitted') => {
+  const doSave = async (saveStatus: 'draft' | 'submitted' | 'resubmitted') => {
     if (saveStatus === 'submitted' && !canSubmit) {
       setError('마감일이 지나 제출할 수 없습니다.')
       return
@@ -1040,7 +1040,7 @@ export default function ReportForm({
           </button>
           <button
             type="button"
-            onClick={() => doSave('submitted')}
+            onClick={() => doSave(mode === 'resubmit' ? 'resubmitted' : 'submitted')}
             disabled={loading || !canSubmit}
             className="flex-[2] font-medium py-3 rounded-xl text-sm transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white"
           >

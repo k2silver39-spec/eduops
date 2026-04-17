@@ -21,12 +21,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json()
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (body.status !== undefined) updates.status = body.status
+  if (body.revision_comment !== undefined) updates.revision_comment = body.revision_comment
+  if (body.status === 'approved') updates.approved_at = new Date().toISOString()
 
   const { data, error } = await admin
     .from('reports')
     .update(updates)
     .eq('id', id)
-    .select()
+    .select('*, author:profiles!user_id(name)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

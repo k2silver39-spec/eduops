@@ -4,7 +4,7 @@
 
 export type ReportType = 'weekly' | 'monthly'
 export type ReportMode = 'create' | 'edit' | 'resubmit'
-export type ReportStatus = 'draft' | 'submitted' | 'revision_requested' | 'revision_approved'
+export type ReportStatus = 'draft' | 'submitted' | 'approved' | 'revision_requested' | 'resubmitted' | 'revision_approved'
 
 // 수행기관 정보
 export interface OrgInfo {

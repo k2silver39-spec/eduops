@@ -35,7 +35,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const isAdmin = profile?.role === 'super_admin'
   const isOwner = report.user_id === user.id
   const isSameOrg = profile?.organization === report.organization
-  const isSubmitted = ['submitted', 'revision_requested', 'revision_approved'].includes(report.status)
+  const isSubmitted = ['submitted', 'approved', 'revision_requested', 'resubmitted', 'revision_approved'].includes(report.status)
 
   if (!isAdmin && !isOwner && !(isSameOrg && isSubmitted)) notFound()
 

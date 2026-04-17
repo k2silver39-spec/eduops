@@ -10,11 +10,13 @@ import {
 } from '../report-types'
 // calcBudgetSubtotal used for totals
 
-const STATUS_CONFIG: Record<ReportStatus, { label: string; cls: string }> = {
-  draft:              { label: '임시저장',  cls: 'bg-gray-100 text-gray-600' },
-  submitted:          { label: '제출완료',  cls: 'bg-green-100 text-green-700' },
-  revision_requested: { label: '수정요청',  cls: 'bg-red-100 text-red-600' },
-  revision_approved:  { label: '수정승인',  cls: 'bg-blue-100 text-blue-700' },
+const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  draft:              { label: '임시저장',   cls: 'bg-gray-100 text-gray-600' },
+  submitted:          { label: '제출완료',   cls: 'bg-green-100 text-green-700' },
+  approved:           { label: '승인',       cls: 'bg-emerald-100 text-emerald-700' },
+  revision_requested: { label: '정정요청',   cls: 'bg-red-100 text-red-600' },
+  resubmitted:        { label: '재제출',     cls: 'bg-blue-100 text-blue-700' },
+  revision_approved:  { label: '재제출 필요', cls: 'bg-amber-100 text-amber-600' },
 }
 
 function isPastDeadline(periodEnd: string) {
@@ -44,7 +46,9 @@ interface Report {
   content: WeeklyContent | MonthlyContent
   status: ReportStatus
   revision_reason: string | null
+  revision_comment: string | null
   submitted_at: string | null
+  approved_at: string | null
   created_at: string
   updated_at: string
   author: { name: string } | null
@@ -354,31 +358,45 @@ export default function ReportDetail({
 }) {
   const router = useRouter()
   const [report, setReport] = useState(initial)
+  const [actionLoading, setActionLoading] = useState(false)
+  // 관리자 정정요청 모달
   const [showRevisionModal, setShowRevisionModal] = useState(false)
-  const [revisionReason, setRevisionReason] = useState('')
-  const [revisionLoading, setRevisionLoading] = useState(false)
+  const [revisionComment, setRevisionComment] = useState('')
 
   const isOwner = report.user_id === currentUserId
   const pastDeadline = isPastDeadline(report.period_end)
-  const cfg = STATUS_CONFIG[report.status]
+  const cfg = STATUS_CONFIG[report.status] ?? { label: report.status, cls: 'bg-gray-100 text-gray-600' }
 
   const content = report.content as unknown as Record<string, unknown>
   const isV2 = content?.version === 2
 
-  const handleRevisionRequest = async () => {
-    if (!revisionReason.trim()) return
-    setRevisionLoading(true)
-    const res = await fetch(`/api/reports/${report.id}`, {
+  // 관리자: 승인
+  const handleApprove = async () => {
+    setActionLoading(true)
+    const res = await fetch(`/api/admin/reports/${report.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'revision_requested', revision_reason: revisionReason.trim() }),
+      body: JSON.stringify({ status: 'approved' }),
+    })
+    if (res.ok) setReport(await res.json())
+    setActionLoading(false)
+  }
+
+  // 관리자: 정정요청
+  const handleAdminRevisionRequest = async () => {
+    if (!revisionComment.trim()) return
+    setActionLoading(true)
+    const res = await fetch(`/api/admin/reports/${report.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'revision_requested', revision_comment: revisionComment.trim() }),
     })
     if (res.ok) {
       setReport(await res.json())
       setShowRevisionModal(false)
-      setRevisionReason('')
+      setRevisionComment('')
     }
-    setRevisionLoading(false)
+    setActionLoading(false)
   }
 
   return (
@@ -413,10 +431,20 @@ export default function ReportDetail({
           </span>
         </div>
 
-        {report.status === 'revision_requested' && report.revision_reason && (
+        {report.status === 'revision_requested' && (report.revision_comment || report.revision_reason) && (
           <div className="mt-4 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
-            <p className="text-xs font-medium text-red-600 mb-1">수정 요청 사유</p>
-            <p className="text-sm text-red-700">{report.revision_reason}</p>
+            <p className="text-xs font-medium text-red-600 mb-1">정정요청 코멘트</p>
+            <p className="text-sm text-red-700">{report.revision_comment || report.revision_reason}</p>
+          </div>
+        )}
+        {report.status === 'approved' && (
+          <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5 flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <p className="text-xs font-medium text-emerald-700">
+              승인 완료{report.approved_at ? ` · ${formatDate(report.approved_at)}` : ''}
+            </p>
           </div>
         )}
       </div>
@@ -450,56 +478,82 @@ export default function ReportDetail({
         </div>
       )}
 
-      {/* 액션 버튼 (본인) */}
+      {/* ── 사용자 액션 버튼 ── */}
       {isOwner && (
         <div className="space-y-2">
-          {report.status === 'submitted' && !pastDeadline && (
-            <button onClick={() => router.push(`/reports/${report.id}/edit`)}
-              className="w-full bg-white border border-gray-300 text-gray-700 font-medium py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors">
-              수정하기
-            </button>
-          )}
-          {report.status === 'submitted' && pastDeadline && (
-            <button onClick={() => setShowRevisionModal(true)}
-              className="w-full bg-white border border-red-200 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 transition-colors">
-              수정 요청
-            </button>
-          )}
-          {report.status === 'revision_approved' && (
-            <button onClick={() => router.push(`/reports/${report.id}/edit?resubmit=1`)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-              재제출하기
-            </button>
-          )}
           {report.status === 'draft' && (
             <button onClick={() => router.push(`/reports/${report.id}/edit`)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
               이어서 작성
             </button>
           )}
+          {report.status === 'submitted' && !pastDeadline && (
+            <button onClick={() => router.push(`/reports/${report.id}/edit`)}
+              className="w-full bg-white border border-gray-300 text-gray-700 font-medium py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+              수정하기
+            </button>
+          )}
+          {(report.status === 'revision_requested' || report.status === 'revision_approved') && (
+            <button onClick={() => router.push(`/reports/${report.id}/edit?resubmit=1`)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+              수정 후 재제출
+            </button>
+          )}
         </div>
       )}
 
-      {/* 수정 요청 모달 */}
+      {/* ── 관리자 액션 버튼 ── */}
+      {isAdmin && (report.status === 'submitted' || report.status === 'resubmitted') && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+            >
+              {actionLoading ? '처리 중...' : '승인'}
+            </button>
+            <button
+              onClick={() => setShowRevisionModal(true)}
+              disabled={actionLoading}
+              className="flex-1 bg-white border border-red-300 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 disabled:opacity-40 transition-colors"
+            >
+              정정요청
+            </button>
+          </div>
+          {report.status === 'resubmitted' && (
+            <p className="text-xs text-center text-blue-600 font-medium">정정 재제출된 보고서입니다</p>
+          )}
+        </div>
+      )}
+
+      {/* ── 관리자 정정요청 모달 ── */}
       {showRevisionModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 px-4 pb-4 md:pb-0">
           <div className="bg-white rounded-2xl w-full max-w-md p-5">
-            <h2 className="text-base font-semibold text-gray-900 mb-1">수정 요청</h2>
-            <p className="text-xs text-gray-400 mb-4">수정이 필요한 이유를 입력해 주세요. 관리자가 검토 후 승인합니다.</p>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">정정요청</h2>
+            <p className="text-xs text-gray-400 mb-4">수정이 필요한 내용을 구체적으로 작성해 주세요. 작성자에게 전달됩니다.</p>
             <textarea
-              value={revisionReason}
-              onChange={(e) => setRevisionReason(e.target.value)}
-              placeholder="수정 요청 사유를 입력하세요"
+              value={revisionComment}
+              onChange={(e) => setRevisionComment(e.target.value)}
+              placeholder="정정 요청 코멘트를 입력하세요"
               rows={4}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-3"
               autoFocus
             />
             <div className="flex gap-2">
-              <button onClick={() => { setShowRevisionModal(false); setRevisionReason('') }}
-                className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors">취소</button>
-              <button onClick={handleRevisionRequest} disabled={revisionLoading || !revisionReason.trim()}
-                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">
-                {revisionLoading ? '요청 중...' : '요청 전송'}
+              <button
+                onClick={() => { setShowRevisionModal(false); setRevisionComment('') }}
+                className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAdminRevisionRequest}
+                disabled={actionLoading || !revisionComment.trim()}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2.5 rounded-xl text-sm transition-colors"
+              >
+                {actionLoading ? '전송 중...' : '정정요청 전송'}
               </button>
             </div>
           </div>

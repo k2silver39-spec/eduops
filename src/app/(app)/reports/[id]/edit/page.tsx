@@ -39,7 +39,7 @@ export default async function EditReportPage({
   if (!report || !profile) notFound()
   if (report.user_id !== user.id) notFound()
 
-  const allowedStatuses = isResubmit ? ['revision_approved'] : ['draft', 'submitted']
+  const allowedStatuses = isResubmit ? ['revision_requested', 'revision_approved'] : ['draft', 'submitted']
   if (!allowedStatuses.includes(report.status)) redirect(`/reports/${id}`)
 
   const type = report.type as ReportType

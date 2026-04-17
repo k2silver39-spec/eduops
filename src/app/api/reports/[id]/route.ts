@@ -27,7 +27,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const isAdmin = profile?.role === 'super_admin'
   const isOwner = report.user_id === user.id
   const isSameOrg = profile?.organization === report.organization
-  const isSubmitted = ['submitted', 'revision_requested', 'revision_approved'].includes(report.status)
+  const isSubmitted = ['submitted', 'approved', 'revision_requested', 'resubmitted', 'revision_approved'].includes(report.status)
 
   if (!isAdmin && !isOwner && !(isSameOrg && isSubmitted)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (body.status !== undefined) {
     updates.status = body.status
-    if (body.status === 'submitted') {
+    if (body.status === 'submitted' || body.status === 'resubmitted') {
       updates.submitted_at = new Date().toISOString()
     }
   }
