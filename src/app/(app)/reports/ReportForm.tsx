@@ -237,15 +237,15 @@ function WeeklyFormBody({
                 </tr>
               )}
               <tr>
-                <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
+                <td className={`${TH_BASE} w-36 text-center`}>기관명</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
                 </td>
               </tr>
               <tr>
-                <td className={`${TH_BASE} text-center`}>실무담당자<br />성명/직위</td>
+                <td className={`${TH_BASE} text-center`}>실무담당자</td>
                 <td className={TD_BASE}>
-                  <input readOnly value={`${value.org_info.operator_name} / ${value.org_info.operator_position}`} className={readonlyCls} />
+                  <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
                 </td>
               </tr>
             </tbody>
@@ -415,9 +415,9 @@ function MonthlyFormBody({
                 </td>
               </tr>
               <tr>
-                <td className={`${TH_BASE} text-center`}>사업책임자<br />성명/직위</td>
+                <td className={`${TH_BASE} text-center`}>사업책임자</td>
                 <td className={TD_BASE}>
-                  <input readOnly value={`${value.org_info.operator_name} / ${value.org_info.operator_position}`} className={readonlyCls} />
+                  <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
                 </td>
               </tr>
             </tbody>

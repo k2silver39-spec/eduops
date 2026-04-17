@@ -83,12 +83,12 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
                 </tr>
               )}
               <tr>
-                <td className={`${TH} w-36`}>운영기관</td>
+                <td className={`${TH} w-36`}>기관명</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
               </tr>
               <tr>
-                <td className={TH}>실무담당자 성명/직위</td>
-                <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
+                <td className={TH}>실무담당자</td>
+                <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -183,12 +183,12 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
                 </tr>
               )}
               <tr>
-                <td className={`${TH} w-36`}>운영기관</td>
+                <td className={`${TH} w-36`}>기관명</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
               </tr>
               <tr>
-                <td className={TH}>사업책임자 성명/직위</td>
-                <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
+                <td className={TH}>사업책임자</td>
+                <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>
           </table>
