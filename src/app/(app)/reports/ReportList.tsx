@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 type ReportType = 'weekly' | 'monthly'
-type ReportStatus = 'draft' | 'submitted' | 'revision_requested' | 'revision_approved'
+type ReportStatus = string
 
 interface Report {
   id: string
@@ -19,15 +19,17 @@ interface Report {
   author?: { name: string } | null
 }
 
-const STATUS_CONFIG: Record<ReportStatus, { label: string; cls: string }> = {
-  draft:              { label: '임시저장', cls: 'bg-gray-100 text-gray-600' },
-  submitted:          { label: '제출완료', cls: 'bg-green-100 text-green-700' },
-  revision_requested: { label: '수정요청', cls: 'bg-red-100 text-red-600' },
-  revision_approved:  { label: '수정승인', cls: 'bg-blue-100 text-blue-700' },
+const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  draft:              { label: '임시저장',   cls: 'bg-gray-100 text-gray-600' },
+  submitted:          { label: '제출완료',   cls: 'bg-green-100 text-green-700' },
+  approved:           { label: '승인',       cls: 'bg-emerald-100 text-emerald-700' },
+  revision_requested: { label: '정정요청',   cls: 'bg-red-100 text-red-600' },
+  resubmitted:        { label: '재제출',     cls: 'bg-blue-100 text-blue-700' },
+  revision_approved:  { label: '재제출 필요', cls: 'bg-amber-100 text-amber-600' },
 }
 
 function StatusBadge({ status }: { status: ReportStatus }) {
-  const cfg = STATUS_CONFIG[status]
+  const cfg = STATUS_CONFIG[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
       {cfg.label}
