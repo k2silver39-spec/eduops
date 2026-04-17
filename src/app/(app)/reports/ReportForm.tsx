@@ -370,13 +370,44 @@ function MonthlyFormBody({
   value,
   onChange,
   prev,
+  year,
+  month,
+  mode,
 }: {
   value: MonthlyContent
   onChange: (v: MonthlyContent) => void
   prev?: MonthlyContent
+  year: number
+  month: number
+  mode: ReportMode
 }) {
-  const setQuant = (patch: Partial<typeof value.quantitative>) =>
-    onChange({ ...value, quantitative: { ...value.quantitative, ...patch } })
+  const [autoFillMsg, setAutoFillMsg] = useState('')
+  const autoFillDone = useRef(false)
+
+  // 최근 주간보고 성과지표 자동입력 (create 모드, kpi_rows가 비어있을 때)
+  useEffect(() => {
+    if (mode !== 'create' || autoFillDone.current) return
+    const isEmpty = !value.kpi_rows || value.kpi_rows.every(r => !r.target && !r.actual)
+    if (!isEmpty) { autoFillDone.current = true; return }
+    const ny = month === 12 ? year + 1 : year
+    const nm = month === 12 ? 1 : month + 1
+    const before = `${ny}-${String(nm).padStart(2, '0')}-01`
+    fetch(`/api/reports/previous?type=weekly&before=${before}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.content?.version === 2 && Array.isArray(data.content.kpi_rows)) {
+          autoFillDone.current = true
+          onChange({ ...value, kpi_rows: data.content.kpi_rows })
+          setAutoFillMsg(`최근 주간보고(${data.period_label}) 성과지표를 자동으로 불러왔습니다.`)
+          setTimeout(() => setAutoFillMsg(''), 6000)
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, year, month])
+
+  const setKpi = (i: number, patch: Partial<typeof value.kpi_rows[0]>) =>
+    onChange({ ...value, kpi_rows: value.kpi_rows.map((r, idx) => idx === i ? { ...r, ...patch } : r) })
 
   const setQual = (patch: Partial<typeof value.qualitative>) =>
     onChange({ ...value, qualitative: { ...value.qualitative, ...patch } })
@@ -384,14 +415,17 @@ function MonthlyFormBody({
   const setBudget = (key: keyof typeof value.budget, patch: Partial<typeof value.budget.operator_gov>) =>
     onChange({ ...value, budget: { ...value.budget, [key]: { ...value.budget[key], ...patch } } })
 
-  const opGov   = calcBudgetRow(value.budget.operator_gov)
-  const opSelf  = calcBudgetRow(value.budget.operator_self)
-  const total   = calcBudgetSubtotal(value.budget.operator_gov, value.budget.operator_self)
+  const opGov  = calcBudgetRow(value.budget.operator_gov)
+  const opSelf = calcBudgetRow(value.budget.operator_self)
+  const total  = calcBudgetSubtotal(value.budget.operator_gov, value.budget.operator_self)
 
   const readonlyCls = 'w-full px-2 py-1.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600 cursor-default'
   const numCls = 'w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white tabular-nums'
-  const autoNumCls = 'w-full px-2 py-1.5 bg-gray-50 text-xs text-right tabular-nums text-gray-700 cursor-default'
+  const autoNumCls = 'w-full px-2 py-1.5 bg-gray-50 text-xs text-center tabular-nums text-gray-600 cursor-default'
   const textareaCls = 'w-full px-3 py-2 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-none leading-relaxed'
+
+  // 이전 월간보고의 정량실적 (ghost용)
+  const prevKpi = (prev as any)?.kpi_rows as typeof value.kpi_rows | undefined
 
   return (
     <div className="space-y-4">
@@ -409,7 +443,7 @@ function MonthlyFormBody({
                 </tr>
               )}
               <tr>
-                <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
+                <td className={`${TH_BASE} w-36 text-center`}>기관명</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
                 </td>
@@ -432,64 +466,81 @@ function MonthlyFormBody({
             ※ 전월 보고 내용을 참고용으로 표시합니다.
           </p>
         )}
-        <div className="overflow-x-auto mb-3">
-          <table className="w-full border-collapse min-w-[360px]">
+        {autoFillMsg && (
+          <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-1.5 mb-3">
+            ✓ {autoFillMsg}
+          </p>
+        )}
+
+        {/* 정량실적 */}
+        <p className="text-xs font-semibold text-gray-600 mb-1.5">정량실적</p>
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full border-collapse min-w-[420px]">
             <thead>
               <tr>
-                <th className={`${TH_BASE} w-24 text-center`}>구분</th>
-                <th className={`${TH_BASE} text-center`}>목표(A)</th>
-                <th className={`${TH_BASE} text-center`}>실적(B)</th>
+                <th className={`${TH_BASE} w-32 text-center`}>지표명</th>
+                <th className={`${TH_BASE} text-center`}>연간목표(A)</th>
+                <th className={`${TH_BASE} text-center`}>누적실적(B)</th>
                 <th className={`${TH_BASE} w-20 text-center`}>달성률</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className={`${TH_BASE} text-center font-medium`}>정량실적</td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput
-                    value={value.quantitative.target}
-                    onChange={(v) => setQuant({ target: v })}
-                    className={numCls}
-                    placeholder={prev?.quantitative.target ? fmtNum(prev.quantitative.target) : '0'}
-                  />
-                </td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput
-                    value={value.quantitative.actual}
-                    onChange={(v) => setQuant({ actual: v })}
-                    className={numCls}
-                    placeholder={prev?.quantitative.actual ? fmtNum(prev.quantitative.actual) : '0'}
-                  />
-                </td>
-                <td className={`${TD_BASE} text-center font-semibold text-blue-600 tabular-nums`}>
-                  {calcRate(value.quantitative.target, value.quantitative.actual)}
-                </td>
-              </tr>
-              <tr>
-                <td className={`${TH_BASE} text-center font-medium`}>정성실적</td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput
-                    value={value.qualitative.target}
-                    onChange={(v) => setQual({ target: v })}
-                    className={numCls}
-                    placeholder={prev?.qualitative.target ? fmtNum(prev.qualitative.target) : '0'}
-                  />
-                </td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput
-                    value={value.qualitative.actual}
-                    onChange={(v) => setQual({ actual: v })}
-                    className={numCls}
-                    placeholder={prev?.qualitative.actual ? fmtNum(prev.qualitative.actual) : '0'}
-                  />
-                </td>
-                <td className={`${TD_BASE} text-center font-semibold text-blue-600 tabular-nums`}>
-                  {calcRate(value.qualitative.target, value.qualitative.actual)}
-                </td>
-              </tr>
+              {KPI_LABELS.map((label, i) => {
+                const row = value.kpi_rows?.[i] ?? { target: '', actual: '' }
+                const prevRow = prevKpi?.[i]
+                return (
+                  <tr key={label}>
+                    <td className={`${TH_BASE} text-center font-medium`}>{label}</td>
+                    <td className={`${TD_BASE} p-0.5`}>
+                      <NumInput
+                        value={row.target}
+                        onChange={(v) => setKpi(i, { target: v })}
+                        className={numCls}
+                        placeholder={prevRow?.target ? fmtNum(prevRow.target) : '0'}
+                      />
+                    </td>
+                    <td className={`${TD_BASE} p-0.5`}>
+                      <NumInput
+                        value={row.actual}
+                        onChange={(v) => setKpi(i, { actual: v })}
+                        className={numCls}
+                        placeholder={prevRow?.actual ? fmtNum(prevRow.actual) : '0'}
+                      />
+                    </td>
+                    <td className={`${TD_BASE} text-center font-semibold text-blue-600 tabular-nums`}>
+                      {calcRate(row.target, row.actual)}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* 정성실적 */}
+        <p className="text-xs font-semibold text-gray-600 mb-1.5">정성실적</p>
+        <div className="space-y-2 mb-4">
+          <GhostTextarea
+            value={value.qualitative.content ?? ''}
+            onChange={(v) => setQual({ content: v })}
+            ghostText={(prev?.qualitative as any)?.content}
+            rows={3}
+            placeholder="정성 실적 내용을 입력하세요"
+            className={textareaCls}
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 whitespace-nowrap">달성률</span>
+            <input
+              type="text"
+              value={value.qualitative.rate ?? ''}
+              onChange={(e) => setQual({ rate: e.target.value })}
+              placeholder="예: 85%"
+              className="w-28 px-2 py-1.5 border border-gray-200 rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            />
+          </div>
+        </div>
+
+        {/* 향후목표 달성계획 */}
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">향후목표 달성계획</label>
           <GhostTextarea
@@ -506,10 +557,10 @@ function MonthlyFormBody({
       {/* ── 3. 예산 집행현황 ── */}
       <SectionCard title="3. 예산 집행현황">
         <div className="overflow-x-auto mb-3">
-          <table className="w-full border-collapse min-w-[420px]">
+          <table className="w-full border-collapse table-fixed min-w-[480px]">
             <thead>
               <tr>
-                <th className={`${TH_BASE} w-32 text-center`}>구분</th>
+                <th className={`${TH_BASE} w-24 text-center`}>구분</th>
                 <th className={`${TH_BASE} text-center`}>예산</th>
                 <th className={`${TH_BASE} text-center`}>집행액</th>
                 <th className={`${TH_BASE} text-center`}>집행잔액</th>
@@ -517,7 +568,6 @@ function MonthlyFormBody({
               </tr>
             </thead>
             <tbody>
-              {/* 국고보조금 */}
               <tr>
                 <td className={`${TH_BASE} text-center`}>국고보조금</td>
                 <td className={`${TD_BASE} p-0.5`}>
@@ -526,10 +576,11 @@ function MonthlyFormBody({
                 <td className={`${TD_BASE} p-0.5`}>
                   <NumInput value={value.budget.operator_gov.executed} onChange={(v) => setBudget('operator_gov', { executed: v })} className={numCls} />
                 </td>
-                <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{opGov.budget ? opGov.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <div className={autoNumCls}>{opGov.budget ? opGov.remaining.toLocaleString('ko-KR') : '—'}</div>
+                </td>
                 <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{opGov.rate}</td>
               </tr>
-              {/* 자기부담금 */}
               <tr>
                 <td className={`${TH_BASE} text-center`}>자기부담금</td>
                 <td className={`${TD_BASE} p-0.5`}>
@@ -538,15 +589,22 @@ function MonthlyFormBody({
                 <td className={`${TD_BASE} p-0.5`}>
                   <NumInput value={value.budget.operator_self.executed} onChange={(v) => setBudget('operator_self', { executed: v })} className={numCls} />
                 </td>
-                <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{opSelf.budget ? opSelf.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <div className={autoNumCls}>{opSelf.budget ? opSelf.remaining.toLocaleString('ko-KR') : '—'}</div>
+                </td>
                 <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{opSelf.rate}</td>
               </tr>
-              {/* 합계 */}
               <tr className="bg-blue-50">
                 <td className={`${TH_BASE} text-center font-bold text-blue-700`}>합계</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.budget ? total.budget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.executed ? total.executed.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.budget ? total.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <div className="w-full px-2 py-1.5 bg-blue-50 text-xs text-center tabular-nums font-semibold text-blue-700">{total.budget ? total.budget.toLocaleString('ko-KR') : '—'}</div>
+                </td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <div className="w-full px-2 py-1.5 bg-blue-50 text-xs text-center tabular-nums font-semibold text-blue-700">{total.executed ? total.executed.toLocaleString('ko-KR') : '—'}</div>
+                </td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <div className="w-full px-2 py-1.5 bg-blue-50 text-xs text-center tabular-nums font-semibold text-blue-700">{total.budget ? total.remaining.toLocaleString('ko-KR') : '—'}</div>
+                </td>
                 <td className={`${TD_BASE} text-center font-bold text-blue-700`}>{total.rate}</td>
               </tr>
             </tbody>
@@ -894,6 +952,9 @@ export default function ReportForm({
             value={monthly}
             onChange={setMonthly}
             prev={prevMonthly}
+            year={monthlyYear}
+            month={monthlyMonth}
+            mode={mode}
           />
         )}
 

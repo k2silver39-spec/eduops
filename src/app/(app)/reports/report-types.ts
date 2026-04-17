@@ -62,14 +62,19 @@ export interface MonthlyBudget {
   operator_self: BudgetEntry // 자기부담금
 }
 
+export interface QualitativeEntry {
+  content: string  // 정성실적 텍스트
+  rate: string     // 달성률 (수동 입력, 예: '85%')
+}
+
 export interface MonthlyContent {
   version: 2
   org_info: OrgInfo
-  quantitative: PerfEntry   // 정량실적
-  qualitative: PerfEntry    // 정성실적
-  achievement_plan: string  // 향후목표 달성계획
+  kpi_rows: KpiRow[]            // 정량실적 (KPI_LABELS 기준)
+  qualitative: QualitativeEntry  // 정성실적
+  achievement_plan: string
   budget: MonthlyBudget
-  budget_plan: string       // 향후예산 활용계획
+  budget_plan: string
 }
 
 // ── 유틸 함수 ──
@@ -133,8 +138,8 @@ export function defaultMonthly(org: string, name: string, agencyType?: string): 
       operator_name: name,
       operator_position: '사업책임자',
     },
-    quantitative: { target: '', actual: '' },
-    qualitative:  { target: '', actual: '' },
+    kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
+    qualitative: { content: '', rate: '' },
     achievement_plan: '',
     budget: {
       operator_gov:  { ...emptyBudget },

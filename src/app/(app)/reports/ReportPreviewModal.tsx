@@ -115,7 +115,12 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
 }
 
 function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; periodLabel: string }) {
-  const { org_info, quantitative, qualitative, achievement_plan, budget, budget_plan } = content
+  const { org_info, achievement_plan, budget, budget_plan } = content
+  // 신규 포맷(kpi_rows) vs 구형 포맷(quantitative) 호환
+  const c = content as any
+  const kpi_rows: { target: string; actual: string }[] | null = Array.isArray(c.kpi_rows) ? c.kpi_rows : null
+  const qualContent: string = c.qualitative?.content ?? ''
+  const qualRate: string = c.qualitative?.rate ?? ''
 
   const opGov  = calcBudgetRow(budget.operator_gov)
   const opSelf = calcBudgetRow(budget.operator_self)
@@ -152,32 +157,53 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
       {/* 2. 정량 및 정성 실적 */}
       <section>
         <h3 className="text-xs font-bold text-gray-700 mb-1 border-b border-gray-400 pb-0.5">2. 정량 및 정성 실적</h3>
-        <table className="w-full border-collapse text-xs">
+
+        {/* 정량실적 */}
+        <p className="text-xs font-semibold text-gray-600 mb-1">정량실적</p>
+        <table className="w-full border-collapse text-xs mb-3">
           <thead>
             <tr>
-              <th className={`${TH} w-24`}>구분</th>
+              <th className={`${TH} w-32`}>지표명</th>
               <th className={`${TH} w-20`}>연간목표(A)</th>
               <th className={`${TH} w-20`}>누적실적(B)</th>
               <th className={`${TH} w-20`}>달성률(B/A)</th>
             </tr>
           </thead>
           <tbody>
+            {kpi_rows
+              ? KPI_LABELS.map((label, i) => {
+                  const row = kpi_rows[i] ?? { target: '', actual: '' }
+                  return (
+                    <tr key={label}>
+                      <td className={TD}>{label}</td>
+                      <td className={TDC}>{fmtNum(row.target) || '—'}</td>
+                      <td className={TDC}>{fmtNum(row.actual) || '—'}</td>
+                      <td className={TDC}>{calcRate(row.target, row.actual)}</td>
+                    </tr>
+                  )
+                })
+              : <tr><td colSpan={4} className={`${TD} text-center`}>—</td></tr>
+            }
+          </tbody>
+        </table>
+
+        {/* 정성실적 */}
+        <p className="text-xs font-semibold text-gray-600 mb-1">정성실적</p>
+        <table className="w-full border-collapse text-xs mb-3">
+          <tbody>
             <tr>
-              <td className={`${TH} font-medium`}>정량실적</td>
-              <td className={TDC}>{fmtNum(quantitative.target) || '—'}</td>
-              <td className={TDC}>{fmtNum(quantitative.actual) || '—'}</td>
-              <td className={TDC}>{calcRate(quantitative.target, quantitative.actual)}</td>
+              <td className={`${TH} w-20`}>내용</td>
+              <td className={`${TD} whitespace-pre-wrap`}>{qualContent || '—'}</td>
             </tr>
             <tr>
-              <td className={`${TH} font-medium`}>정성실적</td>
-              <td className={TDC}>{fmtNum(qualitative.target) || '—'}</td>
-              <td className={TDC}>{fmtNum(qualitative.actual) || '—'}</td>
-              <td className={TDC}>{calcRate(qualitative.target, qualitative.actual)}</td>
+              <td className={TH}>달성률</td>
+              <td className={TDC}>{qualRate || '—'}</td>
             </tr>
           </tbody>
         </table>
+
         {achievement_plan && (
-          <div className="mt-1.5 border border-gray-400 px-3 py-2">
+          <div className="border border-gray-400 px-3 py-2">
             <p className="text-xs font-semibold text-gray-600 mb-1">향후목표 달성계획</p>
             <p className="text-xs text-gray-800 whitespace-pre-wrap">{achievement_plan}</p>
           </div>
