@@ -702,6 +702,7 @@ interface ReportFormProps {
   initialMonthlyContent?: MonthlyContent
   forceAllowSubmit?: boolean
   userProfile: UserProfile
+  existingReports?: { id: string; type: string; period_start: string }[]
 }
 
 // ─────────────────────────────────────────────────
@@ -718,6 +719,7 @@ export default function ReportForm({
   initialMonthlyContent,
   forceAllowSubmit = false,
   userProfile,
+  existingReports,
 }: ReportFormProps) {
   const router = useRouter()
   const today = new Date()
@@ -744,6 +746,7 @@ export default function ReportForm({
   const [showRestorePrompt, setShowRestorePrompt] = useState(false)
   const [restored, setRestored] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [dupReportId, setDupReportId] = useState<string | null>(null)
 
   const autoSaveTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const lsKey = mode === 'create' ? LS_KEY_NEW : (reportId ? lsKeyEdit(reportId) : LS_KEY_NEW)
@@ -797,6 +800,16 @@ export default function ReportForm({
     }
   }, [mode, type, weeklyDate, monthlyYear, monthlyMonth, fetchPrev])
 
+  // ── 중복 보고서 감지 (create 모드)
+  useEffect(() => {
+    if (mode !== 'create' || !existingReports) return
+    const { period_start } = type === 'weekly'
+      ? calcWeeklyPeriod(weeklyDate)
+      : calcMonthlyPeriod(monthlyYear, monthlyMonth)
+    const found = existingReports.find(r => r.type === type && r.period_start === period_start)
+    setDupReportId(found?.id ?? null)
+  }, [mode, type, weeklyDate, monthlyYear, monthlyMonth, existingReports])
+
   const handleRestore = () => {
     const saved = localStorage.getItem(lsKey)
     if (!saved) return
@@ -823,7 +836,7 @@ export default function ReportForm({
     ? calcWeeklyPeriod(weeklyDate)
     : { ...calcMonthlyPeriod(monthlyYear, monthlyMonth), monday: undefined }
   const pastDeadline = isPastDeadline(period_end)
-  const canSubmit = !pastDeadline || forceAllowSubmit
+  const canSubmit = (!pastDeadline || forceAllowSubmit) && !dupReportId
 
   // ── 저장/제출
   const doSave = async (saveStatus: 'draft' | 'submitted' | 'resubmitted') => {
@@ -993,6 +1006,17 @@ export default function ReportForm({
           {pastDeadline && !forceAllowSubmit && (
             <p className="mt-2 text-xs text-red-500">마감일이 지난 기간입니다.</p>
           )}
+          {dupReportId && (
+            <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <div>
+                <p className="text-xs font-medium text-amber-700">해당 기간에 이미 작성된 보고서가 있습니다.</p>
+                <a href={`/reports/${dupReportId}`} className="text-xs text-amber-600 underline">기존 보고서 수정하기 →</a>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 보고서 본문 */}
@@ -1025,7 +1049,7 @@ export default function ReportForm({
             <button
               type="button"
               onClick={() => doSave('draft')}
-              disabled={loading || pastDeadline}
+              disabled={loading || pastDeadline || !!dupReportId}
               className="flex-1 border border-gray-300 text-gray-700 font-medium py-3 rounded-xl text-sm transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               임시저장

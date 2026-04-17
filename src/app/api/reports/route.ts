@@ -27,7 +27,7 @@ export async function GET() {
       .select('id, type, period_label, period_start, period_end, status, submitted_at, created_at, author:profiles!user_id(name)')
       .eq('organization', profile.organization)
       .neq('user_id', user.id)
-      .in('status', ['submitted', 'revision_requested', 'revision_approved'])
+      .in('status', ['submitted', 'approved', 'revision_requested', 'resubmitted', 'revision_approved'])
       .order('period_start', { ascending: false }),
   ])
 
@@ -66,6 +66,22 @@ export async function POST(request: Request) {
 
   if (!['draft', 'submitted'].includes(status)) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  }
+
+  // 기관+유형+기간 중복 확인
+  const { data: existing } = await admin
+    .from('reports')
+    .select('id')
+    .eq('organization', profile.organization)
+    .eq('type', type)
+    .eq('period_start', period_start)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: '해당 기간에 이미 작성된 보고서가 있습니다. 기존 보고서를 수정해 주세요.' },
+      { status: 409 }
+    )
   }
 
   const insertData: Record<string, unknown> = {

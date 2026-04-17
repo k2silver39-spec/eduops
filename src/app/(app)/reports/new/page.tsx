@@ -9,11 +9,17 @@ export default async function NewReportPage() {
   if (!user) redirect('/auth/login')
 
   const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('name, organization, agency_type, status')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, { data: existingReports }] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('name, organization, agency_type, status')
+      .eq('id', user.id)
+      .single(),
+    admin
+      .from('reports')
+      .select('id, type, period_start')
+      .eq('user_id', user.id),
+  ])
 
   if (!profile || profile.status !== 'approved') redirect('/auth/pending')
 
@@ -21,6 +27,7 @@ export default async function NewReportPage() {
     <ReportForm
       mode="create"
       userProfile={{ name: profile.name, organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
+      existingReports={(existingReports ?? []) as { id: string; type: string; period_start: string }[]}
     />
   )
 }
