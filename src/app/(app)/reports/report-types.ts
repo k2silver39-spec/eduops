@@ -25,7 +25,7 @@ export const KPI_LABELS = [
   '홍보(건)',
 ] as const
 
-export const ACTIVITY_LABELS = ['직무교육', '대외협력', '기타'] as const
+export const ACTIVITY_LABELS = ['직무교육', '대외협력 및 홍보', '기타'] as const
 
 export interface KpiRow {
   target: string  // 목표(A) — 숫자 문자열 (콤마 없는 raw digits)
