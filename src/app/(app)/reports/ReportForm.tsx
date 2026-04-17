@@ -481,7 +481,7 @@ function MonthlyFormBody({
                     className={inputCls}
                   />
                 </td>
-                <td className={`${TH_BASE} w-24 text-center`}>사업실무자</td>
+                <td className={`${TH_BASE} w-24 text-center`}>실무담당자</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
                 </td>

@@ -195,7 +195,7 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
               <tr>
                 <td className={`${TH} w-24`}>사업책임자</td>
                 <td className={TD}>{org_info.project_manager || '—'}</td>
-                <td className={`${TH} w-24`}>사업실무자</td>
+                <td className={`${TH} w-24`}>실무담당자</td>
                 <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>
