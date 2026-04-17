@@ -552,12 +552,14 @@ export default function ReportDetail({
               )}
             </>
           )}
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full bg-white border border-red-200 text-red-500 font-medium py-2.5 rounded-xl text-sm hover:bg-red-50 transition-colors"
-          >
-            보고서 삭제
-          </button>
+          {report.status !== 'approved' && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full bg-white border border-red-200 text-red-500 font-medium py-2.5 rounded-xl text-sm hover:bg-red-50 transition-colors"
+            >
+              보고서 삭제
+            </button>
+          )}
         </div>
       )}
 

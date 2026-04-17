@@ -18,6 +18,11 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!ctx) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { admin } = ctx
 
+  const { data: report } = await admin.from('reports').select('status').eq('id', id).single()
+  if (report?.status === 'approved') {
+    return NextResponse.json({ error: '승인된 보고서는 삭제할 수 없습니다.' }, { status: 403 })
+  }
+
   // 첨부파일 스토리지 + DB 삭제
   const { data: atts } = await admin
     .from('attachments').select('storage_path')
