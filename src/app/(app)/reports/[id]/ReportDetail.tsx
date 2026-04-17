@@ -103,8 +103,8 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
             <thead>
               <tr>
                 <th className={`${TH} w-28`}>지표명</th>
-                <th className={`${TH}`}>목표(A)</th>
-                <th className={`${TH}`}>실적(B)</th>
+                <th className={`${TH}`}>연간목표(A)</th>
+                <th className={`${TH}`}>누적실적(B)</th>
                 <th className={`${TH} w-20`}>달성률</th>
               </tr>
             </thead>
@@ -203,8 +203,8 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
             <thead>
               <tr>
                 <th className={`${TH} w-24`}>구분</th>
-                <th className={TH}>목표(A)</th>
-                <th className={TH}>실적(B)</th>
+                <th className={TH}>연간목표(A)</th>
+                <th className={TH}>누적실적(B)</th>
                 <th className={`${TH} w-20`}>달성률</th>
               </tr>
             </thead>

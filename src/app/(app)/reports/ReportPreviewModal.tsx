@@ -62,8 +62,8 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
           <thead>
             <tr>
               <th className={`${TH} w-32`}>지표명</th>
-              <th className={`${TH} w-20`}>목표(A)</th>
-              <th className={`${TH} w-20`}>실적(B)</th>
+              <th className={`${TH} w-20`}>연간목표(A)</th>
+              <th className={`${TH} w-20`}>누적실적(B)</th>
               <th className={`${TH} w-20`}>달성률(B/A)</th>
             </tr>
           </thead>
@@ -156,8 +156,8 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
           <thead>
             <tr>
               <th className={`${TH} w-24`}>구분</th>
-              <th className={`${TH} w-20`}>목표(A)</th>
-              <th className={`${TH} w-20`}>실적(B)</th>
+              <th className={`${TH} w-20`}>연간목표(A)</th>
+              <th className={`${TH} w-20`}>누적실적(B)</th>
               <th className={`${TH} w-20`}>달성률(B/A)</th>
             </tr>
           </thead>

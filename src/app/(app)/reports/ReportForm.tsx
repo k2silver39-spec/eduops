@@ -260,8 +260,8 @@ function WeeklyFormBody({
             <thead>
               <tr>
                 <th className={`${TH_BASE} w-28 text-center`}>지표명</th>
-                <th className={`${TH_BASE} w-24 text-center`}>목표(A)</th>
-                <th className={`${TH_BASE} w-24 text-center`}>실적(B)</th>
+                <th className={`${TH_BASE} w-24 text-center`}>연간목표(A)</th>
+                <th className={`${TH_BASE} w-24 text-center`}>누적실적(B)</th>
                 <th className={`${TH_BASE} w-20 text-center`}>달성률</th>
               </tr>
             </thead>

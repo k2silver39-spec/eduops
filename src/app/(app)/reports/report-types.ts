@@ -17,12 +17,12 @@ export interface OrgInfo {
 // ── 주간 보고서 ──
 
 export const KPI_LABELS = [
-  '프로그램 개발',
-  '전문인력 양성',
-  '수료율',
-  '만족도 점수',
-  '지역확산',
-  '홍보',
+  '프로그램 개발(건)',
+  '전문인력 양성(명)',
+  '수료율(%)',
+  '만족도 점수(점)',
+  '지역확산(건)',
+  '홍보(건)',
 ] as const
 
 export const ACTIVITY_LABELS = ['직무교육', '대외협력', '기타'] as const
