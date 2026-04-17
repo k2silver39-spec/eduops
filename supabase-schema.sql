@@ -7,15 +7,17 @@
 -- 1. profiles 테이블 생성
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id          uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email       text        NOT NULL,
-  name        text        NOT NULL,
-  organization text       NOT NULL,
-  role        text        NOT NULL DEFAULT 'user'
-                          CHECK (role IN ('super_admin', 'user')),
-  status      text        NOT NULL DEFAULT 'pending'
-                          CHECK (status IN ('pending', 'approved', 'rejected')),
-  created_at  timestamptz NOT NULL DEFAULT now()
+  id           uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email        text        NOT NULL,
+  name         text        NOT NULL,
+  organization text        NOT NULL,
+  agency_type  text        NOT NULL DEFAULT '운영기관'
+                           CHECK (agency_type IN ('주관기관', '운영기관', '협력기관')),
+  role         text        NOT NULL DEFAULT 'user'
+                           CHECK (role IN ('super_admin', 'user')),
+  status       text        NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at   timestamptz NOT NULL DEFAULT now()
 );
 
 -- -------------------------------------------------------

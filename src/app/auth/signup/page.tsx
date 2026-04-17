@@ -13,11 +13,12 @@ export default function SignupPage() {
     password: '',
     passwordConfirm: '',
     organization: '',
+    agency_type: '운영기관',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
@@ -54,6 +55,7 @@ export default function SignupPage() {
         email: formData.email,
         name: formData.name,
         organization: formData.organization,
+        agency_type: formData.agency_type,
         role: 'user',
         status: 'pending',
       })
@@ -126,6 +128,24 @@ export default function SignupPage() {
                 placeholder="OO대학교 / OO기업"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
+            </div>
+
+            <div>
+              <label htmlFor="agency_type" className="block text-sm font-medium text-gray-700 mb-1">
+                기관구분
+              </label>
+              <select
+                id="agency_type"
+                name="agency_type"
+                required
+                value={formData.agency_type}
+                onChange={handleChange}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+              >
+                <option value="주관기관">주관기관</option>
+                <option value="운영기관">운영기관</option>
+                <option value="협력기관">협력기관</option>
+              </select>
             </div>
 
             <div>

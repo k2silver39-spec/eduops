@@ -10,6 +10,7 @@ import {
   calcRate, calcBudgetRow, calcBudgetSubtotal, fmtNum,
   defaultWeekly, defaultMonthly,
 } from './report-types'
+// calcBudgetSubtotal은 예산 합계 계산에 사용
 
 // ─────────────────────────────────────────────────
 // 날짜 유틸
@@ -204,38 +205,18 @@ function WeeklyFormBody({
       {/* ── 1. 수행기관 정보 ── */}
       <SectionCard title="1. 수행기관 정보">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[480px]">
+          <table className="w-full border-collapse">
             <tbody>
               <tr>
-                <td className={`${TH_BASE} w-28 text-center`}>운영기관</td>
+                <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
-                </td>
-                <td className={`${TH_BASE} w-24 text-center`}>협력기관①</td>
-                <td className={TD_BASE}>
-                  <input
-                    type="text"
-                    value={value.org_info.partner1}
-                    onChange={(e) => setOrgInfo({ partner1: e.target.value })}
-                    placeholder="기관명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
               <tr>
                 <td className={`${TH_BASE} text-center`}>실무담당자<br />성명/직위</td>
                 <td className={TD_BASE}>
                   <input readOnly value={`${value.org_info.operator_name} / ${value.org_info.operator_position}`} className={readonlyCls} />
-                </td>
-                <td className={`${TH_BASE} text-center`}>협력기관②</td>
-                <td className={TD_BASE}>
-                  <input
-                    type="text"
-                    value={value.org_info.partner2}
-                    onChange={(e) => setOrgInfo({ partner2: e.target.value })}
-                    placeholder="기관명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
             </tbody>
@@ -365,9 +346,6 @@ function MonthlyFormBody({
   onChange: (v: MonthlyContent) => void
   prev?: MonthlyContent
 }) {
-  const setOrgInfo = (patch: Partial<MonthlyContent['org_info']>) =>
-    onChange({ ...value, org_info: { ...value.org_info, ...patch } })
-
   const setQuant = (patch: Partial<typeof value.quantitative>) =>
     onChange({ ...value, quantitative: { ...value.quantitative, ...patch } })
 
@@ -379,16 +357,8 @@ function MonthlyFormBody({
 
   const opGov   = calcBudgetRow(value.budget.operator_gov)
   const opSelf  = calcBudgetRow(value.budget.operator_self)
-  const p1Gov   = calcBudgetRow(value.budget.partner1_gov)
-  const p1Self  = calcBudgetRow(value.budget.partner1_self)
-  const opTotal = calcBudgetSubtotal(value.budget.operator_gov, value.budget.operator_self)
-  const p1Total = calcBudgetSubtotal(value.budget.partner1_gov, value.budget.partner1_self)
-  const grandBudget   = opTotal.budget   + p1Total.budget
-  const grandExecuted = opTotal.executed + p1Total.executed
-  const grandRemain   = grandBudget - grandExecuted
-  const grandRate     = grandBudget > 0 ? `${((grandExecuted / grandBudget) * 100).toFixed(1)}%` : '—'
+  const total   = calcBudgetSubtotal(value.budget.operator_gov, value.budget.operator_self)
 
-  const inputCls = 'w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white'
   const readonlyCls = 'w-full px-2 py-1.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600 cursor-default'
   const numCls = 'w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white tabular-nums'
   const autoNumCls = 'w-full px-2 py-1.5 bg-gray-50 text-xs text-right tabular-nums text-gray-700 cursor-default'
@@ -399,38 +369,18 @@ function MonthlyFormBody({
       {/* ── 1. 수행기관 정보 ── */}
       <SectionCard title="1. 수행기관 정보">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[480px]">
+          <table className="w-full border-collapse">
             <tbody>
               <tr>
-                <td className={`${TH_BASE} w-28 text-center`}>운영기관</td>
+                <td className={`${TH_BASE} w-36 text-center`}>운영기관</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
-                </td>
-                <td className={`${TH_BASE} w-24 text-center`}>협력기관①</td>
-                <td className={TD_BASE}>
-                  <input
-                    type="text"
-                    value={value.org_info.partner1}
-                    onChange={(e) => setOrgInfo({ partner1: e.target.value })}
-                    placeholder="기관명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
               <tr>
                 <td className={`${TH_BASE} text-center`}>사업책임자<br />성명/직위</td>
                 <td className={TD_BASE}>
                   <input readOnly value={`${value.org_info.operator_name} / ${value.org_info.operator_position}`} className={readonlyCls} />
-                </td>
-                <td className={`${TH_BASE} text-center`}>협력기관②</td>
-                <td className={TD_BASE}>
-                  <input
-                    type="text"
-                    value={value.org_info.partner2}
-                    onChange={(e) => setOrgInfo({ partner2: e.target.value })}
-                    placeholder="기관명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
             </tbody>
@@ -519,10 +469,10 @@ function MonthlyFormBody({
       {/* ── 3. 예산 집행현황 ── */}
       <SectionCard title="3. 예산 집행현황">
         <div className="overflow-x-auto mb-3">
-          <table className="w-full border-collapse min-w-[520px]">
+          <table className="w-full border-collapse min-w-[420px]">
             <thead>
               <tr>
-                <th className={`${TH_BASE} w-40 text-center`}>구분</th>
+                <th className={`${TH_BASE} w-32 text-center`}>구분</th>
                 <th className={`${TH_BASE} text-center`}>예산</th>
                 <th className={`${TH_BASE} text-center`}>집행액</th>
                 <th className={`${TH_BASE} text-center`}>집행잔액</th>
@@ -530,17 +480,9 @@ function MonthlyFormBody({
               </tr>
             </thead>
             <tbody>
-              {/* 합계 */}
-              <tr className="bg-blue-50">
-                <td className={`${TH_BASE} text-center font-bold text-blue-700`}>합계</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{grandBudget ? grandBudget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{grandExecuted ? grandExecuted.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{grandBudget ? grandRemain.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TD_BASE} text-center font-bold text-blue-700`}>{grandRate}</td>
-              </tr>
-              {/* 운영기관 국고보조금 */}
+              {/* 국고보조금 */}
               <tr>
-                <td className={`${TH_BASE} text-center`}>운영기관<br/>국고보조금</td>
+                <td className={`${TH_BASE} text-center`}>국고보조금</td>
                 <td className={`${TD_BASE} p-0.5`}>
                   <NumInput value={value.budget.operator_gov.budget} onChange={(v) => setBudget('operator_gov', { budget: v })} className={numCls} />
                 </td>
@@ -550,9 +492,9 @@ function MonthlyFormBody({
                 <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{opGov.budget ? opGov.remaining.toLocaleString('ko-KR') : '—'}</td>
                 <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{opGov.rate}</td>
               </tr>
-              {/* 운영기관 자기부담금 */}
+              {/* 자기부담금 */}
               <tr>
-                <td className={`${TH_BASE} text-center`}>운영기관<br/>자기부담금</td>
+                <td className={`${TH_BASE} text-center`}>자기부담금</td>
                 <td className={`${TD_BASE} p-0.5`}>
                   <NumInput value={value.budget.operator_self.budget} onChange={(v) => setBudget('operator_self', { budget: v })} className={numCls} />
                 </td>
@@ -562,45 +504,13 @@ function MonthlyFormBody({
                 <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{opSelf.budget ? opSelf.remaining.toLocaleString('ko-KR') : '—'}</td>
                 <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{opSelf.rate}</td>
               </tr>
-              {/* 운영기관 합계 */}
-              <tr className="bg-gray-50">
-                <td className={`${TH_BASE} text-center font-semibold`}>운영기관 합계</td>
-                <td className={`${autoNumCls} text-center`}>{opTotal.budget ? opTotal.budget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center`}>{opTotal.executed ? opTotal.executed.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center`}>{opTotal.budget ? opTotal.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{opTotal.rate}</td>
-              </tr>
-              {/* 협력기관① 국고보조금 */}
-              <tr>
-                <td className={`${TH_BASE} text-center`}>협력기관①<br/>국고보조금</td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput value={value.budget.partner1_gov.budget} onChange={(v) => setBudget('partner1_gov', { budget: v })} className={numCls} />
-                </td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput value={value.budget.partner1_gov.executed} onChange={(v) => setBudget('partner1_gov', { executed: v })} className={numCls} />
-                </td>
-                <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{p1Gov.budget ? p1Gov.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{p1Gov.rate}</td>
-              </tr>
-              {/* 협력기관① 자기부담금 */}
-              <tr>
-                <td className={`${TH_BASE} text-center`}>협력기관①<br/>자기부담금</td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput value={value.budget.partner1_self.budget} onChange={(v) => setBudget('partner1_self', { budget: v })} className={numCls} />
-                </td>
-                <td className={`${TD_BASE} p-0.5`}>
-                  <NumInput value={value.budget.partner1_self.executed} onChange={(v) => setBudget('partner1_self', { executed: v })} className={numCls} />
-                </td>
-                <td className={`${TD_BASE} text-right tabular-nums text-gray-600`}>{p1Self.budget ? p1Self.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{p1Self.rate}</td>
-              </tr>
-              {/* 협력기관① 합계 */}
-              <tr className="bg-gray-50">
-                <td className={`${TH_BASE} text-center font-semibold`}>협력기관① 합계</td>
-                <td className={`${autoNumCls} text-center`}>{p1Total.budget ? p1Total.budget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center`}>{p1Total.executed ? p1Total.executed.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${autoNumCls} text-center`}>{p1Total.budget ? p1Total.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TD_BASE} text-center font-medium text-blue-600`}>{p1Total.rate}</td>
+              {/* 합계 */}
+              <tr className="bg-blue-50">
+                <td className={`${TH_BASE} text-center font-bold text-blue-700`}>합계</td>
+                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.budget ? total.budget.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.executed ? total.executed.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${autoNumCls} text-center font-semibold text-blue-700`}>{total.budget ? total.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TD_BASE} text-center font-bold text-blue-700`}>{total.rate}</td>
               </tr>
             </tbody>
           </table>

@@ -8,6 +8,7 @@ import {
   calcRate, calcBudgetRow, calcBudgetSubtotal, fmtNum,
   ReportStatus,
 } from '../report-types'
+// calcBudgetSubtotal used for totals
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; cls: string }> = {
   draft:              { label: '임시저장',  cls: 'bg-gray-100 text-gray-600' },
@@ -73,19 +74,15 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
       <section>
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">수행기관 정보</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="w-full border-collapse min-w-[360px]">
+          <table className="w-full border-collapse">
             <tbody>
               <tr>
-                <td className={`${TH} w-28`}>운영기관</td>
+                <td className={`${TH} w-36`}>운영기관</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
-                <td className={`${TH} w-24`}>협력기관①</td>
-                <td className={TD}>{org_info.partner1 || '—'}</td>
               </tr>
               <tr>
-                <td className={TH}>실무담당자</td>
+                <td className={TH}>실무담당자 성명/직위</td>
                 <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
-                <td className={TH}>협력기관②</td>
-                <td className={TD}>{org_info.partner2 || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -161,16 +158,9 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
 function MonthlyDetail({ content }: { content: MonthlyContent }) {
   const { org_info, quantitative, qualitative, achievement_plan, budget, budget_plan } = content
 
-  const opGov   = calcBudgetRow(budget.operator_gov)
-  const opSelf  = calcBudgetRow(budget.operator_self)
-  const p1Gov   = calcBudgetRow(budget.partner1_gov)
-  const p1Self  = calcBudgetRow(budget.partner1_self)
-  const opTotal = calcBudgetSubtotal(budget.operator_gov, budget.operator_self)
-  const p1Total = calcBudgetSubtotal(budget.partner1_gov, budget.partner1_self)
-  const grandB  = opTotal.budget   + p1Total.budget
-  const grandE  = opTotal.executed + p1Total.executed
-  const grandR  = grandB - grandE
-  const grandRate = grandB > 0 ? `${((grandE / grandB) * 100).toFixed(1)}%` : '—'
+  const opGov  = calcBudgetRow(budget.operator_gov)
+  const opSelf = calcBudgetRow(budget.operator_self)
+  const total  = calcBudgetSubtotal(budget.operator_gov, budget.operator_self)
 
   return (
     <div className="space-y-5">
@@ -178,19 +168,15 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
       <section>
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">수행기관 정보</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="w-full border-collapse min-w-[360px]">
+          <table className="w-full border-collapse">
             <tbody>
               <tr>
-                <td className={`${TH} w-28`}>운영기관</td>
+                <td className={`${TH} w-36`}>운영기관</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
-                <td className={`${TH} w-24`}>협력기관①</td>
-                <td className={TD}>{org_info.partner1 || '—'}</td>
               </tr>
               <tr>
-                <td className={TH}>사업책임자</td>
+                <td className={TH}>사업책임자 성명/직위</td>
                 <td className={TD}>{org_info.operator_name ? `${org_info.operator_name} / ${org_info.operator_position}` : '—'}</td>
-                <td className={TH}>협력기관②</td>
-                <td className={TD}>{org_info.partner2 || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -238,10 +224,10 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
       <section>
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">예산 집행현황</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-200 mb-3">
-          <table className="w-full border-collapse min-w-[440px]">
+          <table className="w-full border-collapse min-w-[360px]">
             <thead>
               <tr>
-                <th className={`${TH} w-36`}>구분</th>
+                <th className={`${TH} w-32`}>구분</th>
                 <th className={TH}>예산</th>
                 <th className={TH}>집행액</th>
                 <th className={TH}>집행잔액</th>
@@ -249,54 +235,26 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
               </tr>
             </thead>
             <tbody>
-              <tr className="bg-blue-50">
-                <td className={`${TH} font-bold text-blue-700`}>합계</td>
-                <td className={`${TDR} font-semibold text-blue-700`}>{grandB ? grandB.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDR} font-semibold text-blue-700`}>{grandE ? grandE.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDR} font-semibold text-blue-700`}>{grandB ? grandR.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDC} font-bold text-blue-700`}>{grandRate}</td>
-              </tr>
               <tr>
-                <td className={TH}>운영기관 국고보조금</td>
+                <td className={`${TH} font-medium`}>국고보조금</td>
                 <td className={TDR}>{fmtNum(budget.operator_gov.budget) || '—'}</td>
                 <td className={TDR}>{fmtNum(budget.operator_gov.executed) || '—'}</td>
                 <td className={TDR}>{opGov.budget ? opGov.remaining.toLocaleString('ko-KR') : '—'}</td>
                 <td className={`${TDC} font-medium text-blue-600`}>{opGov.rate}</td>
               </tr>
               <tr>
-                <td className={TH}>운영기관 자기부담금</td>
+                <td className={`${TH} font-medium`}>자기부담금</td>
                 <td className={TDR}>{fmtNum(budget.operator_self.budget) || '—'}</td>
                 <td className={TDR}>{fmtNum(budget.operator_self.executed) || '—'}</td>
                 <td className={TDR}>{opSelf.budget ? opSelf.remaining.toLocaleString('ko-KR') : '—'}</td>
                 <td className={`${TDC} font-medium text-blue-600`}>{opSelf.rate}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className={`${TH} font-semibold`}>운영기관 합계</td>
-                <td className={TDR}>{opTotal.budget ? opTotal.budget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={TDR}>{opTotal.executed ? opTotal.executed.toLocaleString('ko-KR') : '—'}</td>
-                <td className={TDR}>{opTotal.budget ? opTotal.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDC} font-medium text-blue-600`}>{opTotal.rate}</td>
-              </tr>
-              <tr>
-                <td className={TH}>협력기관① 국고보조금</td>
-                <td className={TDR}>{fmtNum(budget.partner1_gov.budget) || '—'}</td>
-                <td className={TDR}>{fmtNum(budget.partner1_gov.executed) || '—'}</td>
-                <td className={TDR}>{p1Gov.budget ? p1Gov.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDC} font-medium text-blue-600`}>{p1Gov.rate}</td>
-              </tr>
-              <tr>
-                <td className={TH}>협력기관① 자기부담금</td>
-                <td className={TDR}>{fmtNum(budget.partner1_self.budget) || '—'}</td>
-                <td className={TDR}>{fmtNum(budget.partner1_self.executed) || '—'}</td>
-                <td className={TDR}>{p1Self.budget ? p1Self.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDC} font-medium text-blue-600`}>{p1Self.rate}</td>
-              </tr>
-              <tr className="bg-gray-50">
-                <td className={`${TH} font-semibold`}>협력기관① 합계</td>
-                <td className={TDR}>{p1Total.budget ? p1Total.budget.toLocaleString('ko-KR') : '—'}</td>
-                <td className={TDR}>{p1Total.executed ? p1Total.executed.toLocaleString('ko-KR') : '—'}</td>
-                <td className={TDR}>{p1Total.budget ? p1Total.remaining.toLocaleString('ko-KR') : '—'}</td>
-                <td className={`${TDC} font-medium text-blue-600`}>{p1Total.rate}</td>
+              <tr className="bg-blue-50">
+                <td className={`${TH} font-bold text-blue-700`}>합계</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{total.budget ? total.budget.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{total.executed ? total.executed.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDR} font-semibold text-blue-700`}>{total.budget ? total.remaining.toLocaleString('ko-KR') : '—'}</td>
+                <td className={`${TDC} font-bold text-blue-700`}>{total.rate}</td>
               </tr>
             </tbody>
           </table>

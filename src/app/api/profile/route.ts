@@ -8,15 +8,22 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, organization } = body
+  const { name, organization, agency_type } = body
 
-  if (!name?.trim() && !organization?.trim()) {
+  const VALID_AGENCY_TYPES = ['주관기관', '운영기관', '협력기관']
+
+  if (!name?.trim() && !organization?.trim() && !agency_type) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  }
+
+  if (agency_type && !VALID_AGENCY_TYPES.includes(agency_type)) {
+    return NextResponse.json({ error: 'Invalid agency_type' }, { status: 400 })
   }
 
   const updates: Record<string, string> = {}
   if (name?.trim()) updates.name = name.trim()
   if (organization?.trim()) updates.organization = organization.trim()
+  if (agency_type) updates.agency_type = agency_type
 
   const admin = createAdminClient()
   const { error } = await admin

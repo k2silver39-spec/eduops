@@ -11,8 +11,6 @@ export interface OrgInfo {
   operator: string          // 운영기관명 (profile.organization 자동입력)
   operator_name: string     // 담당자 성명 (profile.name 자동입력)
   operator_position: string // 직위 (주간: '실무담당자', 월간: '사업책임자')
-  partner1: string          // 협력기관① (직접 입력)
-  partner2: string          // 협력기관② (직접 입력)
 }
 
 // ── 주간 보고서 ──
@@ -59,10 +57,8 @@ export interface BudgetEntry {
 }
 
 export interface MonthlyBudget {
-  operator_gov:  BudgetEntry // 운영기관 국고보조금
-  operator_self: BudgetEntry // 운영기관 자기부담금
-  partner1_gov:  BudgetEntry // 협력기관① 국고보조금
-  partner1_self: BudgetEntry // 협력기관① 자기부담금
+  operator_gov:  BudgetEntry // 국고보조금
+  operator_self: BudgetEntry // 자기부담금
 }
 
 export interface MonthlyContent {
@@ -118,8 +114,6 @@ export function defaultWeekly(org: string, name: string): WeeklyContent {
       operator: org,
       operator_name: name,
       operator_position: '실무담당자',
-      partner1: '',
-      partner2: '',
     },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
     activity_rows: ACTIVITY_LABELS.map(() => ({ current_week: '', next_week: '', note: '' })),
@@ -135,8 +129,6 @@ export function defaultMonthly(org: string, name: string): MonthlyContent {
       operator: org,
       operator_name: name,
       operator_position: '사업책임자',
-      partner1: '',
-      partner2: '',
     },
     quantitative: { target: '', actual: '' },
     qualitative:  { target: '', actual: '' },
@@ -144,8 +136,6 @@ export function defaultMonthly(org: string, name: string): MonthlyContent {
     budget: {
       operator_gov:  { ...emptyBudget },
       operator_self: { ...emptyBudget },
-      partner1_gov:  { ...emptyBudget },
-      partner1_self: { ...emptyBudget },
     },
     budget_plan: '',
   }
