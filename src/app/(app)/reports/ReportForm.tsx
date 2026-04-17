@@ -519,25 +519,49 @@ function MonthlyFormBody({
 
         {/* 정성실적 */}
         <p className="text-xs font-semibold text-gray-600 mb-1.5">정성실적</p>
-        <div className="space-y-2 mb-4">
-          <GhostTextarea
-            value={value.qualitative.content ?? ''}
-            onChange={(v) => setQual({ content: v })}
-            ghostText={(prev?.qualitative as any)?.content}
-            rows={3}
-            placeholder="정성 실적 내용을 입력하세요"
-            className={textareaCls}
-          />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 whitespace-nowrap">달성률</span>
-            <input
-              type="text"
-              value={value.qualitative.rate ?? ''}
-              onChange={(e) => setQual({ rate: e.target.value })}
-              placeholder="예: 85%"
-              className="w-28 px-2 py-1.5 border border-gray-200 rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-            />
-          </div>
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full border-collapse min-w-[420px]">
+            <thead>
+              <tr>
+                <th className={`${TH_BASE} text-center`}>목표</th>
+                <th className={`${TH_BASE} text-center`}>실적</th>
+                <th className={`${TH_BASE} w-20 text-center`}>달성률</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <GhostTextarea
+                    value={value.qualitative.target ?? ''}
+                    onChange={(v) => setQual({ target: v })}
+                    ghostText={(prev?.qualitative as any)?.target}
+                    rows={3}
+                    placeholder="정성 목표 입력"
+                    className={textareaCls}
+                  />
+                </td>
+                <td className={`${TD_BASE} p-0.5`}>
+                  <GhostTextarea
+                    value={value.qualitative.actual ?? ''}
+                    onChange={(v) => setQual({ actual: v })}
+                    ghostText={(prev?.qualitative as any)?.actual}
+                    rows={3}
+                    placeholder="정성 실적 입력"
+                    className={textareaCls}
+                  />
+                </td>
+                <td className={`${TD_BASE} p-0.5 align-top`}>
+                  <input
+                    type="text"
+                    value={value.qualitative.rate ?? ''}
+                    onChange={(e) => setQual({ rate: e.target.value })}
+                    placeholder="예: 85%"
+                    className={numCls}
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         {/* 향후목표 달성계획 */}

@@ -63,7 +63,8 @@ export interface MonthlyBudget {
 }
 
 export interface QualitativeEntry {
-  content: string  // 정성실적 텍스트
+  target: string   // 정성 목표 (텍스트)
+  actual: string   // 정성 실적 (텍스트)
   rate: string     // 달성률 (수동 입력, 예: '85%')
 }
 
@@ -139,7 +140,7 @@ export function defaultMonthly(org: string, name: string, agencyType?: string): 
       operator_position: '사업책임자',
     },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
-    qualitative: { content: '', rate: '' },
+    qualitative: { target: '', actual: '', rate: '' },
     achievement_plan: '',
     budget: {
       operator_gov:  { ...emptyBudget },

@@ -119,7 +119,8 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
   // 신규 포맷(kpi_rows) vs 구형 포맷(quantitative) 호환
   const c = content as any
   const kpi_rows: { target: string; actual: string }[] | null = Array.isArray(c.kpi_rows) ? c.kpi_rows : null
-  const qualContent: string = c.qualitative?.content ?? ''
+  const qualTarget: string = c.qualitative?.target ?? ''
+  const qualActual: string = c.qualitative?.actual ?? ''
   const qualRate: string = c.qualitative?.rate ?? ''
 
   const opGov  = calcBudgetRow(budget.operator_gov)
@@ -190,13 +191,17 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
         {/* 정성실적 */}
         <p className="text-xs font-semibold text-gray-600 mb-1">정성실적</p>
         <table className="w-full border-collapse text-xs mb-3">
+          <thead>
+            <tr>
+              <th className={TH}>목표</th>
+              <th className={TH}>실적</th>
+              <th className={`${TH} w-20`}>달성률</th>
+            </tr>
+          </thead>
           <tbody>
             <tr>
-              <td className={`${TH} w-20`}>내용</td>
-              <td className={`${TD} whitespace-pre-wrap`}>{qualContent || '—'}</td>
-            </tr>
-            <tr>
-              <td className={TH}>달성률</td>
+              <td className={`${TD} whitespace-pre-wrap align-top`}>{qualTarget || '—'}</td>
+              <td className={`${TD} whitespace-pre-wrap align-top`}>{qualActual || '—'}</td>
               <td className={TDC}>{qualRate || '—'}</td>
             </tr>
           </tbody>
