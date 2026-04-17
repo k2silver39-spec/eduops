@@ -362,6 +362,9 @@ export default function ReportDetail({
   // 관리자 정정요청 모달
   const [showRevisionModal, setShowRevisionModal] = useState(false)
   const [revisionComment, setRevisionComment] = useState('')
+  // 삭제 확인 모달
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const isOwner = report.user_id === currentUserId
   const pastDeadline = isPastDeadline(report.period_end)
@@ -369,6 +372,21 @@ export default function ReportDetail({
 
   const content = report.content as unknown as Record<string, unknown>
   const isV2 = content?.version === 2
+
+  // 삭제
+  const handleDelete = async () => {
+    setDeleteLoading(true)
+    const url = isAdmin ? `/api/admin/reports/${report.id}` : `/api/reports/${report.id}`
+    const res = await fetch(url, { method: 'DELETE' })
+    if (res.ok) {
+      router.replace('/reports')
+    } else {
+      const data = await res.json()
+      alert(data.error ?? '삭제에 실패했습니다.')
+      setDeleteLoading(false)
+      setShowDeleteConfirm(false)
+    }
+  }
 
   // 관리자: 승인
   const handleApprove = async () => {
@@ -482,10 +500,16 @@ export default function ReportDetail({
       {isOwner && (
         <div className="space-y-2">
           {report.status === 'draft' && (
-            <button onClick={() => router.push(`/reports/${report.id}/edit`)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-              이어서 작성
-            </button>
+            <>
+              <button onClick={() => router.push(`/reports/${report.id}/edit`)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                이어서 작성
+              </button>
+              <button onClick={() => setShowDeleteConfirm(true)}
+                className="w-full bg-white border border-red-200 text-red-500 font-medium py-3 rounded-xl text-sm hover:bg-red-50 transition-colors">
+                삭제
+              </button>
+            </>
           )}
           {report.status === 'submitted' && !pastDeadline && (
             <button onClick={() => router.push(`/reports/${report.id}/edit`)}
@@ -503,27 +527,78 @@ export default function ReportDetail({
       )}
 
       {/* ── 관리자 액션 버튼 ── */}
-      {isAdmin && (report.status === 'submitted' || report.status === 'resubmitted') && (
+      {isAdmin && (
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <button
-              onClick={handleApprove}
-              disabled={actionLoading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium py-3 rounded-xl text-sm transition-colors"
-            >
-              {actionLoading ? '처리 중...' : '승인'}
-            </button>
-            <button
-              onClick={() => setShowRevisionModal(true)}
-              disabled={actionLoading}
-              className="flex-1 bg-white border border-red-300 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 disabled:opacity-40 transition-colors"
-            >
-              정정요청
-            </button>
-          </div>
-          {report.status === 'resubmitted' && (
-            <p className="text-xs text-center text-blue-600 font-medium">정정 재제출된 보고서입니다</p>
+          {(report.status === 'submitted' || report.status === 'resubmitted') && (
+            <>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleApprove}
+                  disabled={actionLoading}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium py-3 rounded-xl text-sm transition-colors"
+                >
+                  {actionLoading ? '처리 중...' : '승인'}
+                </button>
+                <button
+                  onClick={() => setShowRevisionModal(true)}
+                  disabled={actionLoading}
+                  className="flex-1 bg-white border border-red-300 text-red-600 font-medium py-3 rounded-xl text-sm hover:bg-red-50 disabled:opacity-40 transition-colors"
+                >
+                  정정요청
+                </button>
+              </div>
+              {report.status === 'resubmitted' && (
+                <p className="text-xs text-center text-blue-600 font-medium">정정 재제출된 보고서입니다</p>
+              )}
+            </>
           )}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full bg-white border border-red-200 text-red-500 font-medium py-2.5 rounded-xl text-sm hover:bg-red-50 transition-colors"
+          >
+            보고서 삭제
+          </button>
+        </div>
+      )}
+
+      {/* ── 삭제 확인 모달 ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4.5 h-4.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">보고서 삭제</p>
+                <p className="text-xs text-gray-500">이 작업은 되돌릴 수 없습니다.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              <span className="font-medium text-gray-900">{report.period_label}</span> 보고서를 삭제하시겠습니까?
+              {attachments.length > 0 && (
+                <span className="block mt-1 text-xs text-gray-400">첨부파일 {attachments.length}개도 함께 삭제됩니다.</span>
+              )}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50 transition-colors disabled:opacity-40"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium py-2.5 rounded-xl text-sm transition-colors"
+              >
+                {deleteLoading ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
