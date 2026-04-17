@@ -198,12 +198,29 @@ function WeeklyFormBody({
   onChange,
   prev,
   weeklyDate,
+  mode,
 }: {
   value: WeeklyContent
   onChange: (v: WeeklyContent) => void
   prev?: WeeklyContent
   weeklyDate: string
+  mode: ReportMode
 }) {
+  const [autoFillMsg, setAutoFillMsg] = useState('')
+  const autoFillDone = useRef(false)
+
+  // 이전 주간보고의 KPI 값 자동입력 (create 모드, 빈 상태일 때)
+  useEffect(() => {
+    if (mode !== 'create' || autoFillDone.current || !prev) return
+    const isEmpty = value.kpi_rows.every(r => !r.target && !r.actual)
+    if (!isEmpty) { autoFillDone.current = true; return }
+    autoFillDone.current = true
+    onChange({ ...value, kpi_rows: prev.kpi_rows })
+    setAutoFillMsg('이전 주간보고의 성과지표 값을 자동으로 불러왔습니다.')
+    setTimeout(() => setAutoFillMsg(''), 6000)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, prev])
+
   const monday = getMondayOfWeek(new Date(weeklyDate + 'T00:00:00'))
   const { thisWeek, nextWeek } = getWeekHeaders(monday)
 
@@ -255,6 +272,11 @@ function WeeklyFormBody({
 
       {/* ── 2. 성과지표 달성 현황 ── */}
       <SectionCard title="2. 성과지표 달성 현황">
+        {autoFillMsg && (
+          <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-1.5 mb-3">
+            ✓ {autoFillMsg}
+          </p>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[420px]">
             <thead>
@@ -420,6 +442,7 @@ function MonthlyFormBody({
   const total  = calcBudgetSubtotal(value.budget.operator_gov, value.budget.operator_self)
 
   const readonlyCls = 'w-full px-2 py-1.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600 cursor-default'
+  const inputCls = 'w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white'
   const numCls = 'w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white tabular-nums'
   const autoNumCls = 'w-full px-2 py-1.5 bg-gray-50 text-xs text-center tabular-nums text-gray-600 cursor-default'
   const textareaCls = 'w-full px-3 py-2 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-none leading-relaxed'
@@ -436,20 +459,29 @@ function MonthlyFormBody({
             <tbody>
               {value.org_info.agency_type && (
                 <tr>
-                  <td className={`${TH_BASE} w-36 text-center`}>기관구분</td>
-                  <td className={TD_BASE}>
+                  <td className={`${TH_BASE} w-24 text-center`}>기관구분</td>
+                  <td className={TD_BASE} colSpan={3}>
                     <input readOnly value={value.org_info.agency_type} className={readonlyCls} />
                   </td>
                 </tr>
               )}
               <tr>
-                <td className={`${TH_BASE} w-36 text-center`}>기관명</td>
-                <td className={TD_BASE}>
+                <td className={`${TH_BASE} w-24 text-center`}>기관명</td>
+                <td className={TD_BASE} colSpan={3}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
                 </td>
               </tr>
               <tr>
-                <td className={`${TH_BASE} text-center`}>사업책임자</td>
+                <td className={`${TH_BASE} w-24 text-center`}>사업책임자</td>
+                <td className={TD_BASE}>
+                  <input
+                    value={value.org_info.project_manager ?? ''}
+                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, project_manager: e.target.value } })}
+                    placeholder="성명 입력"
+                    className={inputCls}
+                  />
+                </td>
+                <td className={`${TH_BASE} w-24 text-center`}>사업실무자</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
                 </td>
@@ -970,6 +1002,7 @@ export default function ReportForm({
             onChange={setWeekly}
             prev={prevWeekly}
             weeklyDate={weeklyDate}
+            mode={mode}
           />
         ) : (
           <MonthlyFormBody

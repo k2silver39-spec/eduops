@@ -184,16 +184,18 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
             <tbody>
               {org_info.agency_type && (
                 <tr>
-                  <td className={`${TH} w-36`}>기관구분</td>
-                  <td className={TD}>{org_info.agency_type}</td>
+                  <td className={`${TH} w-24`}>기관구분</td>
+                  <td className={TD} colSpan={3}>{org_info.agency_type}</td>
                 </tr>
               )}
               <tr>
-                <td className={`${TH} w-36`}>기관명</td>
-                <td className={TD}>{org_info.operator || '—'}</td>
+                <td className={`${TH} w-24`}>기관명</td>
+                <td className={TD} colSpan={3}>{org_info.operator || '—'}</td>
               </tr>
               <tr>
-                <td className={TH}>사업책임자</td>
+                <td className={`${TH} w-24`}>사업책임자</td>
+                <td className={TD}>{org_info.project_manager || '—'}</td>
+                <td className={`${TH} w-24`}>사업실무자</td>
                 <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>

@@ -8,10 +8,11 @@ export type ReportStatus = 'draft' | 'submitted' | 'revision_requested' | 'revis
 
 // 수행기관 정보
 export interface OrgInfo {
-  agency_type?: string       // 기관구분 (profile.agency_type 자동입력)
-  operator: string          // 운영기관명 (profile.organization 자동입력)
-  operator_name: string     // 담당자 성명 (profile.name 자동입력)
-  operator_position: string // 직위 (주간: '실무담당자', 월간: '사업책임자')
+  agency_type?: string        // 기관구분 (자동입력)
+  operator: string            // 기관명 (자동입력)
+  project_manager?: string    // 사업책임자 (월간보고 직접 입력)
+  operator_name: string       // 사업실무자/실무담당자 (자동입력)
+  operator_position: string   // 직위
 }
 
 // ── 주간 보고서 ──
