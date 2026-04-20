@@ -65,6 +65,7 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
               <th className={`${TH} w-20`}>연간목표(A)</th>
               <th className={`${TH} w-20`}>누적실적(B)</th>
               <th className={`${TH} w-20`}>달성률(B/A)</th>
+              <th className={`${TH} w-28`}>비고</th>
             </tr>
           </thead>
           <tbody>
@@ -76,6 +77,7 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
                   <td className={TDC}>{fmtNum(row.target) || '—'}</td>
                   <td className={TDC}>{fmtNum(row.actual) || '—'}</td>
                   <td className={TDC}>{calcRate(row.target, row.actual)}</td>
+                  <td className={TD}>{(row as { note?: string }).note || '—'}</td>
                 </tr>
               )
             })}

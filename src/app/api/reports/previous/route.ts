@@ -10,24 +10,38 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const type = searchParams.get('type')   // 'weekly' | 'monthly'
+  const type = searchParams.get('type')   // 'weekly' | 'monthly' | null(전체)
   const before = searchParams.get('before') // ISO date (e.g. '2026-04-14')
 
-  if (!type || !before) {
-    return NextResponse.json({ error: 'Missing params: type, before' }, { status: 400 })
+  if (!before) {
+    return NextResponse.json({ error: 'Missing param: before' }, { status: 400 })
   }
 
   const admin = createAdminClient()
-  const { data } = await admin
+
+  // 같은 기관 소속이면 불러올 수 있도록 organization 기준으로 조회
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.organization) return NextResponse.json(null)
+
+  let query = admin
     .from('reports')
     .select('content, period_label')
-    .eq('user_id', user.id)
-    .eq('type', type)
-    .eq('status', 'submitted')
+    .eq('organization', profile.organization)
+    .neq('status', 'draft')
     .lt('period_start', before)
     .order('period_start', { ascending: false })
     .limit(1)
-    .maybeSingle()
+
+  if (type) {
+    query = query.eq('type', type)
+  }
+
+  const { data } = await query.maybeSingle()
 
   if (!data) return NextResponse.json(null)
   return NextResponse.json(data)

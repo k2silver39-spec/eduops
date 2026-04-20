@@ -10,7 +10,8 @@ export async function PATCH(request: Request) {
   const body = await request.json()
   const { name, organization, agency_type } = body
 
-  const VALID_AGENCY_TYPES = ['주관기관', '운영기관', '협력기관']
+  // 사용자는 운영기관/협력기관만 선택 가능. 주관기관은 관리자 승격 시 자동 설정
+  const VALID_AGENCY_TYPES = ['운영기관', '협력기관']
 
   if (!name?.trim() && !organization?.trim() && !agency_type) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })

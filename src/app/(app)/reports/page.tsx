@@ -28,7 +28,6 @@ export default async function ReportsPage() {
       .select('id, type, period_label, period_start, period_end, status, submitted_at, created_at, author:profiles!user_id(name)')
       .eq('organization', profile.organization)
       .neq('user_id', user.id)
-      .in('status', ['submitted', 'approved', 'revision_requested', 'resubmitted', 'revision_approved'])
       .order('period_start', { ascending: false }),
   ])
 

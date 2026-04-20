@@ -13,7 +13,7 @@ export default function SignupPage() {
     password: '',
     passwordConfirm: '',
     organization: '',
-    agency_type: '운영기관',
+    agency_type: '운영기관' as '운영기관' | '협력기관',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -142,7 +142,6 @@ export default function SignupPage() {
                 onChange={handleChange}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
               >
-                <option value="주관기관">주관기관</option>
                 <option value="운영기관">운영기관</option>
                 <option value="협력기관">협력기관</option>
               </select>

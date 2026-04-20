@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   WeeklyContent, MonthlyContent,
@@ -322,6 +322,156 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
 }
 
 // ─────────────────────────────────────────────────
+// 월간보고 조회 시 기관 주간보고 목록
+// ─────────────────────────────────────────────────
+const STATUS_BADGE: Record<string, { text: string; cls: string }> = {
+  submitted:          { text: '제출됨',   cls: 'bg-blue-100 text-blue-700' },
+  approved:           { text: '승인됨',   cls: 'bg-green-100 text-green-700' },
+  revision_requested: { text: '수정요청', cls: 'bg-red-100 text-red-700' },
+  resubmitted:        { text: '재제출됨', cls: 'bg-purple-100 text-purple-700' },
+  revision_approved:  { text: '재승인됨', cls: 'bg-teal-100 text-teal-700' },
+}
+
+interface OrgWeekly {
+  id: string
+  period_label: string
+  status: string
+  content: WeeklyContent
+  author: { name: string } | null
+}
+
+function OrgWeeklySection({ periodStart }: { periodStart: string }) {
+  const [list, setList] = useState<OrgWeekly[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const d = new Date(periodStart + 'T00:00:00')
+    const year = d.getFullYear()
+    const month = d.getMonth() + 1
+    fetch(`/api/reports/org?year=${year}&month=${month}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setList(Array.isArray(data) ? data : []); setLoading(false) })
+      .catch(() => { setList([]); setLoading(false) })
+  }, [periodStart])
+
+  const badge = (s: string) => STATUS_BADGE[s] ?? { text: s, cls: 'bg-gray-100 text-gray-600' }
+
+  if (loading) return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <p className="text-xs text-gray-400">기관 주간보고 불러오는 중...</p>
+    </div>
+  )
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        이번 달 기관 주간보고 <span className="normal-case font-normal text-gray-400">({list.length}건)</span>
+      </p>
+
+      {list.length === 0 ? (
+        <p className="text-sm text-gray-400">이번 달 제출된 주간보고가 없습니다.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {list.map(r => {
+            const b = badge(r.status)
+            const expanded = expandedId === r.id
+            return (
+              <div key={r.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : r.id)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-gray-800 truncate">{r.period_label}</span>
+                    {r.author?.name && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">{r.author.name}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${b.cls}`}>{b.text}</span>
+                    <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                </button>
+
+                {expanded && r.content?.version === 2 && (
+                  <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 space-y-4">
+                    {/* KPI */}
+                    <section>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">성과지표 달성 현황</p>
+                      <div className="overflow-x-auto rounded-lg border border-gray-200">
+                        <table className="w-full border-collapse min-w-[340px]">
+                          <thead>
+                            <tr>
+                              <th className={`${TH} w-28`}>지표명</th>
+                              <th className={TH}>연간목표(A)</th>
+                              <th className={TH}>누적실적(B)</th>
+                              <th className={`${TH} w-20`}>달성률</th>
+                              <th className={`${TH} w-24`}>비고</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {KPI_LABELS.map((label, i) => {
+                              const row = r.content.kpi_rows[i] ?? { target: '', actual: '' }
+                              return (
+                                <tr key={label}>
+                                  <td className={`${TH} font-medium`}>{label}</td>
+                                  <td className={TDC}>{fmtNum(row.target) || '—'}</td>
+                                  <td className={TDC}>{fmtNum(row.actual) || '—'}</td>
+                                  <td className={`${TDC} font-semibold text-blue-600`}>{calcRate(row.target, row.actual)}</td>
+                                  <td className={TD}>{(row as { note?: string }).note || '—'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+
+                    {/* 주간 실적 */}
+                    <section>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">주간 실적 및 계획</p>
+                      <div className="overflow-x-auto rounded-lg border border-gray-200">
+                        <table className="w-full border-collapse min-w-[480px]">
+                          <thead>
+                            <tr>
+                              <th className={`${TH} w-20`}>구분</th>
+                              <th className={TH}>이번주 실적</th>
+                              <th className={TH}>다음주 계획</th>
+                              <th className={`${TH} w-24`}>비고</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ACTIVITY_LABELS.map((label, i) => {
+                              const row = r.content.activity_rows[i] ?? { current_week: '', next_week: '', note: '' }
+                              return (
+                                <tr key={label}>
+                                  <td className={`${TH} font-medium`}>{label}</td>
+                                  <td className={`${TD} whitespace-pre-wrap align-top`}>{row.current_week || '—'}</td>
+                                  <td className={`${TD} whitespace-pre-wrap align-top`}>{row.next_week || '—'}</td>
+                                  <td className={TD}>{row.note || '—'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────
 // 구버전(v1) fallback
 // ─────────────────────────────────────────────────
 function LegacyDetail({ content, type }: { content: Record<string, unknown>; type: 'weekly' | 'monthly' }) {
@@ -476,6 +626,11 @@ export default function ReportDetail({
           : <LegacyDetail content={content} type={report.type} />
         }
       </div>
+
+      {/* 기관 주간보고 (월간보고 조회 시) */}
+      {report.type === 'monthly' && (
+        <OrgWeeklySection periodStart={report.period_start} />
+      )}
 
       {/* 첨부파일 */}
       {attachments.length > 0 && (

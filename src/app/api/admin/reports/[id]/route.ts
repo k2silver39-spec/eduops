@@ -12,6 +12,22 @@ async function requireAdmin() {
   return { user, admin }
 }
 
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const ctx = await requireAdmin()
+  if (!ctx) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { admin } = ctx
+
+  const { data, error } = await admin
+    .from('reports')
+    .select('id, type, period_label, content, organization, author:profiles!user_id(name)')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(data)
+}
+
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const ctx = await requireAdmin()

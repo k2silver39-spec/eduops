@@ -203,24 +203,29 @@ export default function MyPage() {
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-1">기관구분</p>
-            <div className="flex gap-2">
-              <select
-                value={editAgencyType}
-                onChange={(e) => setEditAgencyType(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
-              >
-                <option value="주관기관">주관기관</option>
-                <option value="운영기관">운영기관</option>
-                <option value="협력기관">협력기관</option>
-              </select>
-              <button
-                onClick={handleAgencyTypeSave}
-                disabled={agencyTypeLoading || editAgencyType === profile?.agency_type}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
-              >
-                저장
-              </button>
-            </div>
+            {profile?.agency_type === '주관기관' ? (
+              <p className="text-sm text-gray-700 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                주관기관 <span className="text-xs text-gray-400">(관리자 계정)</span>
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                <select
+                  value={editAgencyType}
+                  onChange={(e) => setEditAgencyType(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+                >
+                  <option value="운영기관">운영기관</option>
+                  <option value="협력기관">협력기관</option>
+                </select>
+                <button
+                  onClick={handleAgencyTypeSave}
+                  disabled={agencyTypeLoading || editAgencyType === profile?.agency_type}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
+                >
+                  저장
+                </button>
+              </div>
+            )}
             {agencyTypeMsg && <p className="text-xs text-blue-600 mt-1.5">{agencyTypeMsg}</p>}
           </div>
           <div>

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     .select('type, period_label, content, organization, author:profiles!user_id(name)')
     .lte('period_start', endDate)
     .gte('period_end', startDate)
-    .in('status', ['submitted', 'revision_requested', 'revision_approved'])
+    .neq('status', 'draft')
     .order('period_start', { ascending: true })
 
   if (organization && organization !== 'all') query = query.eq('organization', organization)
@@ -38,23 +38,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '해당 기간에 제출된 보고서가 없습니다.' }, { status: 404 })
   }
 
-  // 보고서 텍스트 포맷
+  // 보고서 텍스트 포맷 (v2 content 기준)
+  const KPI_LABELS = ['프로그램 개발(건)', '전문인력 양성(명)', '수료율(%)', '만족도 점수(점)', '지역확산(건)', '홍보(건)']
+  const ACTIVITY_LABELS = ['직무교육', '대외협력 및 홍보', '기타']
+
   const formatted = reports.map((r) => {
-    const c = r.content as Record<string, unknown>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = r.content as any
     const typeLbl = r.type === 'weekly' ? '주간' : '월간'
     const author = (r.author as unknown as { name: string } | null)?.name ?? '알 수 없음'
     let body = ''
-    if (r.type === 'weekly') {
-      const ip = (c.in_progress as Array<{ task: string; progress: number }> | undefined) ?? []
-      body = `완료업무: ${c.completed || '-'}\n진행중: ${ip.map(i => `${i.task}(${i.progress}%)`).join(', ') || '-'}\n다음주계획: ${c.next_plan || '-'}\n이슈: ${c.issues || '-'}`
+
+    if (c?.version === 2) {
+      if (r.type === 'weekly') {
+        const kpiLines = KPI_LABELS.map((label, i) => {
+          const row = c.kpi_rows?.[i] ?? {}
+          return `${label}: 목표 ${row.target || '-'}, 실적 ${row.actual || '-'}`
+        }).join(' / ')
+        const actLines = ACTIVITY_LABELS.map((label, i) => {
+          const row = c.activity_rows?.[i] ?? {}
+          return `[${label}] 이번주: ${row.current_week || '-'} / 다음주: ${row.next_week || '-'}`
+        }).join('\n')
+        body = `성과지표: ${kpiLines}\n${actLines}`
+      } else {
+        const kpiLines = KPI_LABELS.map((label, i) => {
+          const row = c.kpi_rows?.[i] ?? {}
+          return `${label}: 목표 ${row.target || '-'}, 실적 ${row.actual || '-'}`
+        }).join(' / ')
+        const qual = c.qualitative ?? {}
+        body = `성과지표: ${kpiLines}\n정성목표: ${qual.target || '-'}\n정성실적: ${qual.actual || '-'} (달성률 ${qual.rate || '-'})\n향후계획: ${c.achievement_plan || '-'}`
+      }
     } else {
-      const goals = (c.goals as Array<{ goal: string; achievement_rate: number }> | undefined) ?? []
-      body = `주요성과: ${c.achievements || '-'}\n목표달성: ${goals.map(g => `${g.goal}(${g.achievement_rate}%)`).join(', ') || '-'}\n다음달목표: ${c.next_month_plan || '-'}\n이슈: ${c.issues || '-'}`
+      // 구버전 fallback
+      if (r.type === 'weekly') {
+        body = `완료업무: ${c?.completed || '-'}\n다음주계획: ${c?.next_plan || '-'}`
+      } else {
+        body = `주요성과: ${c?.achievements || '-'}\n다음달목표: ${c?.next_month_plan || '-'}`
+      }
     }
     return `[${typeLbl}보고 | ${r.period_label} | ${author} / ${r.organization}]\n${body}`
   }).join('\n\n---\n\n')
 
-  const prompt = `다음은 ${startDate}~${endDate} 기간의 업무보고입니다.\n\n${formatted}\n\n위 내용을 분석해 아래 JSON 형식으로 응답하세요. 반드시 JSON만 반환:\n{\n  "overall": "전체 종합 요약 (200자 내외)",\n  "individuals": [\n    {\n      "name": "이름",\n      "organization": "소속",\n      "completed": "완료 업무 핵심 요약",\n      "issues": "이슈/건의사항 (없으면 빈 문자열)"\n    }\n  ]\n}`
+  const prompt = `다음은 ${startDate}~${endDate} 기간의 업무보고입니다.\n\n${formatted}\n\n위 내용을 분석해 아래 JSON 형식으로 응답하세요. 반드시 JSON만 반환:\n{\n  "overall": "전체 종합 요약 (200자 내외)",\n  "individuals": [\n    {\n      "name": "이름",\n      "organization": "소속",\n      "completed": "주요 실적 및 완료 업무 핵심 요약",\n      "issues": "이슈/건의사항 (없으면 빈 문자열)"\n    }\n  ]\n}`
 
   const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
