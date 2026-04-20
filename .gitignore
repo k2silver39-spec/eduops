@@ -42,3 +42,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# PWA (빌드 시 자동 생성)
+public/sw.js
+public/workbox-*.js
+public/sw.js.map
+public/workbox-*.js.map

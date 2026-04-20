@@ -15,12 +15,25 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "교육운영 통합 관리 시스템",
   description: "교육운영 통합 관리 시스템",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "EduOps",
+  },
+  icons: {
+    apple: "/icons/icon-192x192.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover",   // iOS safe area (노치/홈 인디케이터) 활성화
+  viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
