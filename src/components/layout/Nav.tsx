@@ -102,7 +102,7 @@ export default function Nav({ profile }: { profile: Profile | null }) {
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 flex-col bg-white border-r border-gray-200 z-30">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100">
-          <span className="text-sm font-bold text-gray-900 leading-tight block">교육운영<br />통합관리시스템</span>
+          <span className="text-sm font-bold text-gray-900 leading-tight block">의료AI<br />직무교육사업<br />관리시스템</span>
         </div>
 
         {/* Menu */}
