@@ -47,7 +47,7 @@ function LoginForm() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-gray-900">로그인</h1>
-            <p className="mt-2 text-sm text-gray-500">교육운영 통합 관리 시스템</p>
+            <p className="mt-2 text-sm text-gray-500">의료AI 직무교육사업 관리시스템</p>
           </div>
 
           <form
