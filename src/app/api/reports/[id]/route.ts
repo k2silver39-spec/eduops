@@ -96,5 +96,32 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 첨부파일 삭제
+  const removeIds: string[] = Array.isArray(body.removeAttachmentIds) ? body.removeAttachmentIds : []
+  if (removeIds.length > 0) {
+    const { data: toRemove } = await admin
+      .from('attachments').select('storage_path').in('id', removeIds)
+    if (toRemove && toRemove.length > 0) {
+      await admin.storage.from('attachments').remove(toRemove.map((a: { storage_path: string }) => a.storage_path))
+    }
+    await admin.from('attachments').delete().in('id', removeIds)
+  }
+
+  // 첨부파일 추가
+  const addFiles: { path: string; filename: string; size: number }[] =
+    Array.isArray(body.addAttachments) ? body.addAttachments : []
+  if (addFiles.length > 0) {
+    await admin.from('attachments').insert(
+      addFiles.map((a) => ({
+        entity_type: 'report',
+        entity_id: id,
+        filename: a.filename,
+        storage_path: a.path,
+        size: a.size,
+      }))
+    )
+  }
+
   return NextResponse.json(data)
 }

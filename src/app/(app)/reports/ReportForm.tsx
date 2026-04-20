@@ -1,6 +1,18 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+
+// ─────────────────────────────────────────────────
+// 첨부파일 유틸
+// ─────────────────────────────────────────────────
+interface PendingFile { path: string; filename: string; size: number }
+interface ExistingFile { id: string; filename: string; size: number }
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
 import { useRouter } from 'next/navigation'
 import ReportPreviewModal from './ReportPreviewModal'
 import {
@@ -903,6 +915,7 @@ interface ReportFormProps {
   forceAllowSubmit?: boolean
   userProfile: UserProfile
   existingReports?: { id: string; type: string; period_start: string }[]
+  initialAttachments?: ExistingFile[]
 }
 
 // ─────────────────────────────────────────────────
@@ -920,6 +933,7 @@ export default function ReportForm({
   forceAllowSubmit = false,
   userProfile,
   existingReports,
+  initialAttachments = [],
 }: ReportFormProps) {
   const router = useRouter()
   const today = new Date()
@@ -955,6 +969,41 @@ export default function ReportForm({
   const [restored, setRestored] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [dupReportId, setDupReportId] = useState<string | null>(null)
+
+  // ── 첨부파일
+  const [existingFiles, setExistingFiles] = useState<ExistingFile[]>(initialAttachments)
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
+  const [removedIds, setRemovedIds] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? [])
+    if (!selected.length) return
+    e.target.value = ''
+    setUploading(true)
+    for (const file of selected) {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        setPendingFiles(prev => [...prev, { path: data.path, filename: data.filename, size: data.size }])
+      } else {
+        setError(data.error ?? '파일 업로드 실패')
+      }
+    }
+    setUploading(false)
+  }
+
+  const removeExisting = (id: string) => {
+    setExistingFiles(prev => prev.filter(f => f.id !== id))
+    setRemovedIds(prev => [...prev, id])
+  }
+
+  const removePending = (idx: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== idx))
+  }
 
   const autoSaveTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const lsKey = mode === 'create' ? LS_KEY_NEW : (reportId ? lsKeyEdit(reportId) : LS_KEY_NEW)
@@ -1066,20 +1115,26 @@ export default function ReportForm({
     setError('')
 
     const content = type === 'weekly' ? weekly : monthly
-    const body = { type, period_label, period_start, period_end, content, status: saveStatus }
 
     let res: Response
     if (mode === 'create') {
       res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          type, period_label, period_start, period_end, content, status: saveStatus,
+          attachments: pendingFiles,
+        }),
       })
     } else {
       res = await fetch(`/api/reports/${reportId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, status: saveStatus }),
+        body: JSON.stringify({
+          content, status: saveStatus,
+          addAttachments: pendingFiles,
+          removeAttachmentIds: removedIds,
+        }),
       })
     }
 
@@ -1250,6 +1305,64 @@ export default function ReportForm({
             mode={mode}
           />
         )}
+
+        {/* ── 첨부파일 ── */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-700 mb-3">
+            첨부파일 <span className="text-gray-400 font-normal">(선택, 파일당 10MB 이하)</span>
+          </p>
+          <div className="space-y-2">
+            {/* 기존 첨부파일 (수정 모드) */}
+            {existingFiles.map((f) => (
+              <div key={f.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                </svg>
+                <a
+                  href={`/api/attachments/${f.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline flex-1 truncate"
+                >
+                  {f.filename}
+                </a>
+                <span className="text-xs text-gray-400 flex-shrink-0">{formatSize(f.size)}</span>
+                <button type="button" onClick={() => removeExisting(f.id)} className="p-0.5 text-gray-400 hover:text-red-500 flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            {/* 새로 추가된 파일 */}
+            {pendingFiles.map((f, i) => (
+              <div key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                </svg>
+                <span className="text-sm text-gray-700 flex-1 truncate">{f.filename}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">{formatSize(f.size)}</span>
+                <button type="button" onClick={() => removePending(i)} className="p-0.5 text-gray-400 hover:text-red-500 flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors w-full disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              {uploading ? '업로드 중...' : '파일 추가'}
+            </button>
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileAdd} />
+          </div>
+        </div>
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm px-3 py-2.5 rounded-xl">{error}</div>
