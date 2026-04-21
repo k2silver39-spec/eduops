@@ -391,7 +391,7 @@ function WeeklyFormBody({
       <SectionCard title="3. 주간 실적 및 계획">
         {prev && (
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded px-2 py-1.5 mb-3">
-            ※ 지난주 보고 내용을 참고용으로 표시합니다.
+            ※ 지난주 리포트 내용을 참고용으로 표시합니다.
           </p>
         )}
         <div className="overflow-x-auto">
@@ -495,7 +495,7 @@ function OrgWeeklyReports({ year, month }: { year: number; month: number }) {
         className="w-full flex items-center justify-between bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-left"
       >
         <p className="text-xs font-semibold text-gray-700">
-          이번 달 기관 주간보고 현황
+          이번 달 기관 주간 리포트 현황
           {!loading && <span className="ml-1.5 text-gray-400 font-normal">({reports.length}건)</span>}
         </p>
         <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -508,7 +508,7 @@ function OrgWeeklyReports({ year, month }: { year: number; month: number }) {
           {loading ? (
             <p className="text-xs text-gray-400 text-center py-3">불러오는 중...</p>
           ) : reports.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-3">이번 달 제출된 주간보고가 없습니다.</p>
+            <p className="text-xs text-gray-400 text-center py-3">이번 달 제출된 주간 리포트가 없습니다.</p>
           ) : (
             <div className="space-y-1.5">
               {reports.map(r => (
@@ -632,7 +632,7 @@ function MonthlyFormBody({
               target: data.content.kpi_rows[i]?.target ?? r.target,
             })),
           })
-          setAutoFillMsg(`최근 보고(${data.period_label}) 연간목표 값을 자동으로 불러왔습니다.`)
+          setAutoFillMsg(`최근 리포트(${data.period_label}) 연간목표 값을 자동으로 불러왔습니다.`)
           setTimeout(() => setAutoFillMsg(''), 6000)
         }
       })
@@ -707,7 +707,7 @@ function MonthlyFormBody({
       <SectionCard title="2. 정량 및 정성 실적">
         {prev && (
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded px-2 py-1.5 mb-3">
-            ※ 전월 보고 내용을 참고용으로 표시합니다.
+            ※ 전월 리포트 내용을 참고용으로 표시합니다.
           </p>
         )}
         {autoFillMsg && (
@@ -1164,7 +1164,7 @@ export default function ReportForm({
           </svg>
         </button>
         <h1 className="text-base font-semibold text-gray-900">
-          {mode === 'create' ? '보고서 작성' : mode === 'edit' ? '보고서 수정' : '보고서 재제출'}
+          {mode === 'create' ? '리포트 작성' : mode === 'edit' ? '리포트 수정' : '리포트 재제출'}
         </h1>
       </div>
 
@@ -1172,7 +1172,7 @@ export default function ReportForm({
       {showRestorePrompt && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm font-medium text-amber-800 mb-1">임시저장된 내용이 있습니다</p>
-          <p className="text-xs text-amber-600 mb-3">이전에 작성하던 보고서를 불러오시겠습니까?</p>
+          <p className="text-xs text-amber-600 mb-3">이전에 작성하던 리포트를 불러오시겠습니까?</p>
           <div className="flex gap-2">
             <button onClick={handleRestore} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors">불러오기</button>
             <button onClick={handleDiscard} className="px-3 py-1.5 border border-amber-300 text-amber-700 text-xs font-medium rounded-lg hover:bg-amber-100 transition-colors">새로 작성</button>
@@ -1191,14 +1191,14 @@ export default function ReportForm({
           <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
           </svg>
-          <p className="text-xs text-gray-500">참고: <span className="font-medium text-gray-700">{prevLabel}</span> 보고서 내용이 입력칸에 흐릿하게 표시됩니다.</p>
+          <p className="text-xs text-gray-500">참고: <span className="font-medium text-gray-700">{prevLabel}</span> 리포트 내용이 입력칸에 회색으로 표시됩니다.</p>
         </div>
       )}
 
       <div className="space-y-4">
         {/* 보고서 유형 */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-2">보고서 유형</label>
+          <label className="block text-xs font-medium text-gray-500 mb-2">리포트 유형</label>
           <div className="flex gap-2">
             {(['weekly', 'monthly'] as ReportType[]).map((t) => (
               <button
@@ -1211,7 +1211,7 @@ export default function ReportForm({
                   'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {t === 'weekly' ? '주간보고' : '월간보고'}
+                {t === 'weekly' ? '주간 리포트' : '월간 리포트'}
               </button>
             ))}
           </div>
@@ -1219,7 +1219,7 @@ export default function ReportForm({
 
         {/* 기간 선택 */}
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <label className="block text-xs font-medium text-gray-500 mb-3">보고 기간</label>
+          <label className="block text-xs font-medium text-gray-500 mb-3">리포트 기간</label>
           {mode === 'create' ? (
             type === 'weekly' ? (() => {
               const weeks = getWeeksInMonth(weeklyDisplayYear, weeklyDisplayMonth)
@@ -1279,8 +1279,8 @@ export default function ReportForm({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
               </svg>
               <div>
-                <p className="text-xs font-medium text-amber-700">해당 기간에 이미 작성된 보고서가 있습니다.</p>
-                <a href={`/reports/${dupReportId}`} className="text-xs text-amber-600 underline">기존 보고서 수정하기 →</a>
+                <p className="text-xs font-medium text-amber-700">해당 기간에 이미 작성된 리포트가 있습니다.</p>
+                <a href={`/reports/${dupReportId}`} className="text-xs text-amber-600 underline">기존 리포트 수정하기 →</a>
               </div>
             </div>
           )}

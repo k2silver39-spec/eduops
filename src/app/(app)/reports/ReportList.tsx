@@ -68,7 +68,7 @@ export default function ReportList({
                 tab === t ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-200'
               }`}
             >
-              {t === 'weekly' ? '주간보고' : '월간보고'}
+              {t === 'weekly' ? '주간 리포트' : '월간 리포트'}
             </button>
           ))}
         </div>
@@ -77,10 +77,10 @@ export default function ReportList({
       <div className="px-4 mt-4 space-y-6">
         {/* 내 보고서 */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">내 보고서</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">내 리포트</h2>
           {filteredMy.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
-              <p className="text-sm text-gray-400">작성된 보고서가 없습니다.</p>
+              <p className="text-sm text-gray-400">작성된 리포트가 없습니다.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -108,7 +108,7 @@ export default function ReportList({
         {/* 우리 기관 보고서 */}
         {filteredOrg.length > 0 && (
           <section>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">우리 기관 보고서</h2>
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">우리 기관 리포트</h2>
             <div className="space-y-2">
               {filteredOrg.map((report) => (
                 <Link

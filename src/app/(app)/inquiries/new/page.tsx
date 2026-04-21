@@ -184,7 +184,7 @@ export default function NewInquiryPage() {
         <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3">
           <div>
             <p className="text-sm font-medium text-gray-900">공개 문의</p>
-            <p className="text-xs text-gray-400 mt-0.5">같은 기관의 다른 구성원이 볼 수 있습니다</p>
+            <p className="text-xs text-gray-400 mt-0.5">모든 구성원과 관리자가 열람할 수 있습니다</p>
           </div>
           <button
             type="button"
