@@ -65,17 +65,6 @@ function CallbackHandler() {
     })
   }, [router, searchParams])
 
-    // 4. 그 외: 세션 확인
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Session check:', session ? 'exists' : 'none')
-      if (session) {
-        router.replace(next)
-      } else {
-        router.replace('/auth/login?error=1')
-      }
-    })
-  }, [router, searchParams])
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
