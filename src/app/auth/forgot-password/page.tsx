@@ -14,21 +14,26 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
 
-    const data = await res.json()
-    setLoading(false)
+      const data = await res.json().catch(() => ({}))
+      setLoading(false)
 
-    if (!res.ok) {
-      setError(data.error ?? '오류가 발생했습니다. 다시 시도해 주세요.')
-      return
+      if (!res.ok) {
+        setError(data.error ?? '오류가 발생했습니다. 다시 시도해 주세요.')
+        return
+      }
+
+      setSent(true)
+    } catch {
+      setLoading(false)
+      setError('네트워크 오류가 발생했습니다. 다시 시도해 주세요.')
     }
-
-    setSent(true)
   }
 
   if (sent) {
