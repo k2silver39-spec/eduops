@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSearchParams } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -19,6 +19,7 @@ function EyeIcon({ open }: { open: boolean }) {
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const [searchParams] = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm]   = useState('')
   const [showPw, setShowPw]     = useState(false)
@@ -28,13 +29,62 @@ export default function ResetPasswordPage() {
   const [done, setDone]         = useState(false)
   const [checking, setChecking] = useState(true)
   const [hasSession, setHasSession] = useState(false)
+  const [debugInfo, setDebugInfo] = useState('')
 
   useEffect(() => {
-    createClient().auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session)
+    const supabase = createClient()
+    const token = searchParams.get('token')
+    const type = searchParams.get('type')
+    const accessToken = searchParams.get('access_token')
+    
+    console.log('ResetPassword page params:', { token, type, accessToken })
+
+    // 1. access_token이 있으면 직접 세션 설정
+    if (accessToken) {
+      console.log('Setting session from access_token...')
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: searchParams.get('refresh_token') || '',
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Set session error:', error)
+          setDebugInfo(`세션 설정 오류: ${error.message}`)
+          setChecking(false)
+        } else {
+          setHasSession(true)
+          setChecking(false)
+        }
+      })
+      return
+    }
+
+    // 2. getSession으로 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('getSession result:', session ? 'session exists' : 'no session')
+      if (session) {
+        setHasSession(true)
+      } else {
+        // 세션이 없으면 onAuthStateChange로 대기
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state change:', event, session ? 'has session' : 'no session')
+          if (event === 'SIGNED_IN') {
+            setHasSession(true)
+            subscription.unsubscribe()
+            setChecking(false)
+          }
+        })
+        // 3초 대기 후에도 없으면 실패
+        setTimeout(() => {
+          if (checking) {
+            setDebugInfo('세션을 확인할 수 없습니다. 링크가 만료되었을 수 있습니다.')
+            setChecking(false)
+          }
+        }, 3000)
+        return
+      }
       setChecking(false)
     })
-  }, [])
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,6 +134,7 @@ export default function ResetPasswordPage() {
           </div>
           <h2 className="text-base font-bold text-gray-900 mb-2">링크가 만료되었습니다</h2>
           <p className="text-sm text-gray-500 mb-5">재설정 링크가 유효하지 않거나 이미 사용되었습니다.</p>
+          {debugInfo && <p className="text-xs text-red-400 mb-4">{debugInfo}</p>}
           <a
             href="/auth/forgot-password"
             className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 rounded-xl transition text-center"
