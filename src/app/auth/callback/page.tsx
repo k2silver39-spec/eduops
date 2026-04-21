@@ -18,15 +18,10 @@ function CallbackHandler() {
     const code = searchParams.get('code')
     const errorCode = searchParams.get('error_code')
     const errorDesc = searchParams.get('error_description')
-    const type = searchParams.get('type')
-    const token = searchParams.get('token')
     const accessToken = searchParams.get('access_token')
-
-    console.log('Callback params:', { code, errorCode, errorDesc, type, token, accessToken })
 
     // 에러 파라미터가 있으면 로그인 페이지로
     if (errorCode || errorDesc) {
-      console.error('Auth error:', errorCode, errorDesc)
       router.replace('/auth/login?error=1')
       return
     }
@@ -35,13 +30,10 @@ function CallbackHandler() {
 
     // 1. code 파라미터가 있으면 PKCE 방식으로 세션 교환
     if (code) {
-      console.log('Exchanging code for session...')
-      supabase.auth.exchangeCodeForSession(code).then(({ error, data }) => {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
-          console.error('Code exchange error:', error)
           router.replace('/auth/login?error=1')
         } else {
-          console.log('Session exchanged successfully:', data.session)
           router.replace(next)
         }
       })
@@ -50,13 +42,11 @@ function CallbackHandler() {
 
     // 2. access_token이 있으면 직접 설정
     if (accessToken) {
-      console.log('Setting session with access_token...')
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: searchParams.get('refresh_token') || '',
       }).then(({ error }) => {
         if (error) {
-          console.error('Set session error:', error)
           router.replace('/auth/login?error=1')
         } else {
           router.replace(next)
@@ -65,18 +55,15 @@ function CallbackHandler() {
       return
     }
 
-    // 3. token이 있으면 (type=recovery) 세션 확인 후 처리
-    if (token && type === 'recovery') {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          router.replace(next)
-        } else {
-          // 세션이 없으면 로그인 페이지로
-          router.replace('/auth/login?error=1')
-        }
-      })
-      return
-    }
+    // 3. 그 외: 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace(next)
+      } else {
+        router.replace('/auth/login?error=1')
+      }
+    })
+  }, [router, searchParams])
 
     // 4. 그 외: 세션 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
