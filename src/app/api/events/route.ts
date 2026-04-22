@@ -25,6 +25,34 @@ export async function GET(request: Request) {
   const to = new Date(year, month, 1)
   to.setDate(to.getDate() + 7)
 
+  if (profile.role !== 'super_admin') {
+    // Two separate queries to avoid PostgREST string-parse issues with Korean org names
+    const [ownRes, publicRes] = await Promise.all([
+      admin.from('events')
+        .select('*')
+        .eq('organization', profile.organization)
+        .gte('start_at', from.toISOString())
+        .lte('start_at', to.toISOString()),
+      admin.from('events')
+        .select('*')
+        .eq('agency_type', '주관기관')
+        .eq('is_public', true)
+        .gte('start_at', from.toISOString())
+        .lte('start_at', to.toISOString()),
+    ])
+
+    if (ownRes.error) return NextResponse.json({ error: ownRes.error.message }, { status: 500 })
+
+    const merged = [...(ownRes.data ?? []), ...(publicRes.data ?? [])]
+      .filter((e, i, arr) => arr.findIndex((x: { id: string }) => x.id === e.id) === i)
+      .sort((a: { start_at: string }, b: { start_at: string }) =>
+        new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+      )
+
+    return NextResponse.json(merged)
+  }
+
+  // 관리자
   let query = admin
     .from('events')
     .select('*')
@@ -32,16 +60,8 @@ export async function GET(request: Request) {
     .lte('start_at', to.toISOString())
     .order('start_at', { ascending: true })
 
-  if (profile.role !== 'super_admin') {
-    // 본인 기관 일정 + 주관기관 공개 일정
-    query = query.or(
-      `organization.eq.${profile.organization},and(agency_type.eq.주관기관,is_public.eq.true)`
-    )
-  } else {
-    // 관리자 기관 필터
-    const org = searchParams.get('organization')
-    if (org && org !== 'all') query = query.eq('organization', org)
-  }
+  const org = searchParams.get('organization')
+  if (org && org !== 'all') query = query.eq('organization', org)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

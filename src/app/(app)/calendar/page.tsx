@@ -24,14 +24,22 @@ export default async function CalendarPage() {
     }
   }
 
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-56px)] md:h-screen">
+        <p className="text-sm text-gray-500">프로필을 불러올 수 없습니다.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="h-[calc(100vh-56px)] md:h-screen flex flex-col">
       <CalendarView
         profile={{
-          id:           profile!.id,
-          role:         profile!.role,
-          agency_type:  profile!.agency_type ?? '',
-          organization: profile!.organization ?? '',
+          id:           profile.id,
+          role:         profile.role,
+          agency_type:  profile.agency_type ?? '',
+          organization: profile.organization ?? '',
         }}
         organizations={organizations}
       />

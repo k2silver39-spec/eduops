@@ -55,6 +55,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
   })
   const [events,     setEvents]     = useState<CalendarEvent[]>([])
   const [loading,    setLoading]    = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [orgFilter,  setOrgFilter]  = useState('all')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [modalEvent,   setModalEvent]   = useState<CalendarEvent | null | undefined>(undefined)
@@ -65,12 +66,20 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
 
   const fetchEvents = useCallback(async () => {
     setLoading(true)
+    setFetchError(null)
     try {
       const apiBase = isAdmin ? '/api/admin/events' : '/api/events'
       const params  = new URLSearchParams({ year: String(year), month: String(month) })
       if (isAdmin && orgFilter !== 'all') params.set('organization', orgFilter)
       const res = await fetch(`${apiBase}?${params}`)
-      if (res.ok) setEvents(await res.json())
+      if (res.ok) {
+        setEvents(await res.json())
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setFetchError(body.error ?? `서버 오류 (${res.status})`)
+      }
+    } catch {
+      setFetchError('네트워크 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -241,6 +250,17 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
       {loading && (
         <div className="text-center py-2">
           <span className="text-xs text-gray-400">불러오는 중...</span>
+        </div>
+      )}
+
+      {/* 오류 */}
+      {fetchError && (
+        <div className="mx-4 mb-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+          <span className="font-semibold">일정을 불러오지 못했습니다.</span>
+          {' '}{fetchError}
+          {fetchError.includes('relation') || fetchError.includes('does not exist') ? (
+            <p className="mt-1 text-red-500">Supabase SQL Editor에서 events 테이블 마이그레이션을 실행해 주세요.</p>
+          ) : null}
         </div>
       )}
 
