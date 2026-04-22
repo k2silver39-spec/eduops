@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,20 +27,19 @@ function Overlay({ children }: { children: React.ReactNode }) {
 
 function ResetPasswordContent() {
   const router = useRouter()
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm]   = useState('')
-  const [showPw, setShowPw]     = useState(false)
-  const [showCf, setShowCf]     = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [done, setDone]         = useState(false)
-  const [checking, setChecking] = useState(true)
+  const passwordRef = useRef<HTMLInputElement>(null)
+  const confirmRef  = useRef<HTMLInputElement>(null)
+  const [showPw, setShowPw]         = useState(false)
+  const [showCf, setShowCf]         = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState('')
+  const [done, setDone]             = useState(false)
+  const [checking, setChecking]     = useState(true)
   const [hasSession, setHasSession] = useState(false)
+  const [mismatch, setMismatch]     = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
-    
-    // getSession으로 한 번만 세션 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
       setHasSession(!!session)
       setChecking(false)
@@ -49,6 +48,8 @@ function ResetPasswordContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const password = passwordRef.current?.value ?? ''
+    const confirm  = confirmRef.current?.value ?? ''
     if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return }
     if (password.length < 8)  { setError('비밀번호는 8자 이상이어야 합니다.'); return }
     setLoading(true)
@@ -139,11 +140,11 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
+                ref={passwordRef}
                 id="password"
                 type={showPw ? 'text' : 'password'}
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                defaultValue=""
                 placeholder="8자 이상 입력"
                 className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
@@ -160,11 +161,16 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
+                ref={confirmRef}
                 id="confirm"
                 type={showCf ? 'text' : 'password'}
                 required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
+                defaultValue=""
+                onChange={() => {
+                  const pw = passwordRef.current?.value ?? ''
+                  const cf = confirmRef.current?.value ?? ''
+                  setMismatch(cf.length > 0 && pw !== cf)
+                }}
                 placeholder="비밀번호 재입력"
                 className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
@@ -173,7 +179,7 @@ function ResetPasswordContent() {
                 <EyeIcon open={showCf} />
               </button>
             </div>
-            {confirm.length > 0 && password !== confirm && (
+            {mismatch && (
               <p className="mt-1 text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
             )}
           </div>
