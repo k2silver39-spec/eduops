@@ -69,9 +69,52 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from('reports')
     .update(updates)
     .eq('id', id)
-    .select('*, author:profiles!user_id(name)')
+    .select('*, author:profiles!user_id(name, agency_type)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 승인 시 캘린더 일정 자동 생성
+  if (body.status === 'approved' && data) {
+    const report = data as {
+      id: string
+      user_id: string
+      organization: string
+      type: string
+      period_label: string
+      period_start: string
+      period_end: string
+      author: { name: string; agency_type: string } | null
+    }
+
+    // 중복 방지: 이미 같은 source_id 일정이 있으면 스킵
+    const { count } = await admin
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('source', 'report')
+      .eq('source_id', report.id)
+
+    if ((count ?? 0) === 0) {
+      const authorName = (report.author as { name: string } | null)?.name ?? '작성자'
+      const typeLabel  = report.type === 'weekly' ? '주간' : '월간'
+      const agencyType = (report.author as { agency_type: string } | null)?.agency_type ?? ''
+
+      await admin.from('events').insert({
+        user_id:      report.user_id,
+        organization: report.organization,
+        agency_type:  agencyType,
+        title:        `${authorName} - ${typeLabel}보고 (${report.period_label})`,
+        description:  '',
+        start_at:     `${report.period_start}T00:00:00.000Z`,
+        end_at:       `${report.period_end}T23:59:59.000Z`,
+        is_allday:    true,
+        color:        'gray',
+        source:       'report',
+        source_id:    report.id,
+        is_public:    false,
+      })
+    }
+  }
+
   return NextResponse.json(data)
 }
