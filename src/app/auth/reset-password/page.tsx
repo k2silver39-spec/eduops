@@ -32,15 +32,11 @@ function ResetPasswordContent() {
   useEffect(() => {
     const supabase = createClient()
     
-    // onAuthStateChange로 세션 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        setHasSession(!!session)
-        setChecking(false)
-      }
+    // getSession으로 한 번만 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session)
+      setChecking(false)
     })
-
-    return () => subscription.unsubscribe()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
