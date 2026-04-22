@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -36,6 +36,8 @@ function ResetPasswordContent() {
   const [done, setDone]         = useState(false)
   const [checking, setChecking] = useState(true)
   const [hasSession, setHasSession] = useState(false)
+  const passwordRef = useRef<HTMLInputElement>(null)
+  const confirmRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -139,12 +141,12 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
-                key="password-input"
+                ref={passwordRef}
                 id="password"
                 type={showPw ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); passwordRef.current?.focus(); }}
                 placeholder="8자 이상 입력"
                 className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
@@ -161,12 +163,12 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
-                key="confirm-input"
+                ref={confirmRef}
                 id="confirm"
                 type={showCf ? 'text' : 'password'}
                 required
                 value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
+                onChange={(e) => { setConfirm(e.target.value); confirmRef.current?.focus(); }}
                 placeholder="비밀번호 재입력"
                 className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
