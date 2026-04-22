@@ -17,6 +17,14 @@ function EyeIcon({ open }: { open: boolean }) {
   )
 }
 
+function Overlay({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
+      {children}
+    </div>
+  )
+}
+
 function ResetPasswordContent() {
   const router = useRouter()
   const [password, setPassword] = useState('')
@@ -57,13 +65,6 @@ function ResetPasswordContent() {
     setDone(true)
     setTimeout(() => router.push('/auth/login'), 2500)
   }
-
-  // ── 오버레이 배경 공통 래퍼
-  const Overlay = ({ children }: { children: React.ReactNode }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-4">
-      {children}
-    </div>
-  )
 
   if (checking) {
     return (
@@ -138,6 +139,7 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
+                key="password-input"
                 id="password"
                 type={showPw ? 'text' : 'password'}
                 required
@@ -159,6 +161,7 @@ function ResetPasswordContent() {
             </label>
             <div className="relative">
               <input
+                key="confirm-input"
                 id="confirm"
                 type={showCf ? 'text' : 'password'}
                 required
