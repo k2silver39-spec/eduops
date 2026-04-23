@@ -17,11 +17,16 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 }
 
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
-  // mammoth은 선택 의존성이므로 동적 import
   try {
     const mammoth = await import('mammoth')
-    const result = await mammoth.extractRawText({ buffer })
+    const result = await mammoth.convertToHtml({ buffer })
     return result.value
+      .replace(/<img[^>]*>/g, '')
+      .replace(/ style="[^"]*"/g, '')
+      .replace(/ class="[^"]*"/g, '')
+      .replace(/<p>\s*<\/p>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
   } catch {
     throw new Error('DOCX 파싱 라이브러리를 불러올 수 없습니다.')
   }
@@ -85,16 +90,26 @@ export async function POST(request: Request) {
       )
     }
 
-    // 텍스트가 너무 길면 앞 8000자만 사용
-    const truncated = text.slice(0, 8000)
+    // 텍스트가 너무 길면 앞 12000자만 사용
+    const truncated = text.slice(0, 12000)
     const refYear = year ?? String(new Date().getFullYear())
 
     const prompt = `다음 문서에서 날짜와 관련된 모든 일정을 추출하세요.
 기준 연도: ${refYear}
-반드시 JSON 배열만 반환하세요. 다른 텍스트는 포함하지 마세요.
-형식: [{"title":"string","start_at":"ISO8601","end_at":"ISO8601","is_allday":boolean,"description":"string"}]
-날짜가 모호하면 is_allday: true로 처리하세요.
-종료일이 없으면 시작일과 동일하게 설정하세요.
+
+[추출 규칙]
+1. HTML 표(<table>)가 있으면 각 행(<tr>)을 한 건의 일정으로, 헤더(<th>/<td>)로 컬럼 의미 매칭.
+2. 같은 행의 날짜·제목·설명은 반드시 같은 일정으로 연관. 표 경계 넘지 않음.
+3. 표 없어도 같은 단락/불릿 내 날짜+제목은 한 일정으로 묶음.
+4. 다양한 날짜 표기(1월 5일, 2026-01-05, 1/5(수))를 ISO8601로 정규화. 연도 누락 시 기준 연도 사용.
+5. 범위 날짜(1월 5일~1월 7일)는 start_at/end_at 각각 채우고 is_allday:true.
+6. 시간 미명시 → is_allday:true. 시간 명시 → is_allday:false + ISO8601에 시각 포함.
+7. 같은 제목이 여러 날짜에 흩어진 경우 각각 별도 이벤트로 추출.
+8. description에 같은 행/문단의 장소·대상·비고를 간결히 합침.
+
+[반환 형식]
+JSON 객체만 반환. 다른 텍스트 금지.
+{"events":[{"title":"string","start_at":"ISO8601","end_at":"ISO8601","is_allday":boolean,"description":"string"}]}
 
 문서:
 ${truncated}`
@@ -108,7 +123,7 @@ ${truncated}`
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: '당신은 문서에서 일정 정보를 추출하는 어시스턴트입니다. JSON만 반환하세요.' },
+          { role: 'system', content: '당신은 공공기관 공문/일정표에서 일정 정보를 구조적으로 추출하는 어시스턴트입니다. 표의 행·열 의미를 해석하고, 흩어진 정보를 연결해 JSON 객체만 반환하세요.' },
           { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },

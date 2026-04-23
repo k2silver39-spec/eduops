@@ -21,6 +21,19 @@ const COLOR_LIGHT: Record<string, string> = {
   gray:   'bg-gray-100 text-gray-600',
 }
 
+// 기관명 해시 → 6색 결정론적 매핑 (djb2 변형)
+const ORG_COLORS: CalendarEvent['color'][] = ['blue', 'green', 'red', 'orange', 'purple', 'gray']
+
+export function getOrgColor(orgName: string | null | undefined): CalendarEvent['color'] {
+  if (!orgName) return 'gray'
+  let hash = 5381
+  for (let i = 0; i < orgName.length; i++) {
+    hash = ((hash << 5) + hash + orgName.charCodeAt(i)) | 0
+  }
+  const idx = Math.abs(hash) % ORG_COLORS.length
+  return ORG_COLORS[idx]
+}
+
 const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토']
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
@@ -95,21 +108,25 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
     })
 
   // ── 일정 저장 ──
-  const saveEvent = async (data: Partial<CalendarEvent>) => {
+  const saveEvent = async (data: Partial<CalendarEvent> | Partial<CalendarEvent>[]) => {
     if (modalEvent?.id) {
+      const payload = Array.isArray(data) ? data[0] : data
       const res = await fetch(`/api/events/${modalEvent.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error()
     } else {
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error()
+      const list = Array.isArray(data) ? data : [data]
+      const results = await Promise.all(list.map(item =>
+        fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+        })
+      ))
+      if (results.some(r => !r.ok)) throw new Error()
     }
     setModalEvent(undefined)
     fetchEvents()
@@ -224,6 +241,16 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
               {organizations.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           )}
+          {isAdmin && organizations.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {organizations.map(o => (
+                <span key={o} className="inline-flex items-center gap-1 text-[11px] text-gray-600">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${COLOR_BG[getOrgColor(o)]}`} />
+                  <span className="truncate max-w-[120px]">{o}</span>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex-1" />
           <button
             onClick={() => setShowImport(true)}
@@ -304,7 +331,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                       <button
                         key={ev.id}
                         onClick={e => { e.stopPropagation(); setModalEvent(ev) }}
-                        className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium truncate flex items-center gap-1 ${COLOR_LIGHT[ev.color]}`}
+                        className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium truncate flex items-center gap-1 ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}
                       >
                         {ev.agency_type === '주관기관' && ev.is_public && (
                           <span className="flex-shrink-0">📌</span>
@@ -351,7 +378,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                       onClick={() => setModalEvent(ev)}
                       className="w-full flex items-start gap-2.5 text-left p-2.5 hover:bg-gray-50 rounded-lg transition-colors"
                     >
-                      <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${COLOR_BG[ev.color]}`} />
+                      <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${COLOR_BG[getOrgColor(ev.organization)]}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{ev.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -413,7 +440,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                     <div key={i} className="py-1 px-0.5 space-y-0.5 min-h-[28px]">
                       {dayEvts.map(ev => (
                         <button key={ev.id} onClick={() => setModalEvent(ev)}
-                          className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate ${COLOR_LIGHT[ev.color]}`}>
+                          className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}>
                           {ev.title}
                         </button>
                       ))}
@@ -438,7 +465,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                       <div key={i} className={`border-l border-gray-100 px-0.5 py-0.5 relative ${toDateStr(d) === todayStr ? 'bg-blue-50/30' : ''}`}>
                         {dayEvts.map(ev => (
                           <button key={ev.id} onClick={() => setModalEvent(ev)}
-                            className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium mb-0.5 ${COLOR_LIGHT[ev.color]}`}>
+                            className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium mb-0.5 ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}>
                             <span className="opacity-70">{fmtTime(ev.start_at)}</span>{' '}
                             <span className="truncate block">{ev.title}</span>
                           </button>
@@ -458,6 +485,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
         <EventModal
           event={modalEvent}
           defaultDate={selectedDate ?? toDateStr(today)}
+          defaultColor={getOrgColor(profile.organization)}
           canPublish={canPublish}
           currentUserId={profile.id}
           isAdmin={isAdmin}
