@@ -40,7 +40,7 @@ const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
 ]
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const
 const MIN_COUNT = 2
-const MAX_COUNT = 52
+const MAX_COUNT = 366
 
 function toLocalDatetime(iso: string) {
   if (!iso) return ''
@@ -205,11 +205,11 @@ export default function EventModal({
     if (isRepeating && (repeatType === 'weekly' || repeatType === 'biweekly') && weekdays.length === 0) {
       setError('반복 요일을 1개 이상 선택해 주세요.'); return
     }
-    if (isRepeating && endType === 'count' && (repeatCount < MIN_COUNT || repeatCount > MAX_COUNT)) {
-      setError(`반복 횟수는 ${MIN_COUNT}~${MAX_COUNT}회 사이여야 합니다.`); return
-    }
-    if (isRepeating && endType === 'date' && !repeatUntil) {
+    if (isRepeating && !repeatUntil) {
       setError('반복 종료일을 입력해 주세요.'); return
+    }
+    if (isRepeating && repeatUntil && repeatUntil < startVal.split('T')[0]) {
+      setError('반복 종료일은 시작일 이후여야 합니다.'); return
     }
 
     setSaving(true); setError('')
@@ -223,7 +223,7 @@ export default function EventModal({
       } else {
         const occurrences = buildOccurrences({
           firstStart, firstEnd, repeatType, weekdays,
-          endType, repeatCount, repeatUntil, isAllday,
+          endType: 'date', repeatCount: MIN_COUNT, repeatUntil, isAllday,
         })
         if (occurrences.length === 0) {
           setError('반복 조건으로 생성된 일정이 없습니다.'); setSaving(false); return
@@ -328,30 +328,27 @@ export default function EventModal({
               )}
 
               {repeatType !== 'none' && (
-                <div className="flex items-center gap-2">
-                  <select
-                    value={endType}
-                    onChange={e => setEndType(e.target.value as EndType)}
-                    className="px-2 py-2 border border-gray-300 rounded-lg text-xs bg-white"
-                  >
-                    <option value="count">횟수</option>
-                    <option value="date">종료일</option>
-                  </select>
-                  {endType === 'count' ? (
-                    <input
-                      type="number" min={MIN_COUNT} max={MAX_COUNT} value={repeatCount}
-                      onChange={e => setRepeatCount(Number(e.target.value))}
-                      className="w-20 px-2 py-2 border border-gray-300 rounded-lg text-xs"
-                    />
-                  ) : (
-                    <input
-                      type="date" value={repeatUntil} onChange={e => setRepeatUntil(e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-xs"
-                    />
-                  )}
-                  <span className="text-xs text-gray-400">
-                    {endType === 'count' ? `${MIN_COUNT}~${MAX_COUNT}회` : '이 날짜까지'}
-                  </span>
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 space-y-2">
+                  <p className="text-xs font-medium text-gray-600">반복 기간</p>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-400 mb-1">시작일</p>
+                      <div className="px-2.5 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-700">
+                        {startVal ? startVal.split('T')[0] : '—'}
+                      </div>
+                    </div>
+                    <span className="text-gray-400 pb-2">~</span>
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-400 mb-1">종료일 <span className="text-red-400">*</span></p>
+                      <input
+                        type="date"
+                        value={repeatUntil}
+                        min={startVal ? startVal.split('T')[0] : undefined}
+                        onChange={e => setRepeatUntil(e.target.value)}
+                        className="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
