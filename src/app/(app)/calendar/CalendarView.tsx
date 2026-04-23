@@ -119,11 +119,12 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
       if (!res.ok) throw new Error()
     } else {
       const list = Array.isArray(data) ? data : [data]
+      const repeat_group_id = list.length > 1 ? crypto.randomUUID() : undefined
       const results = await Promise.all(list.map(item =>
         fetch('/api/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item),
+          body: JSON.stringify(repeat_group_id ? { ...item, repeat_group_id } : item),
         })
       ))
       if (results.some(r => !r.ok)) throw new Error()
@@ -135,6 +136,14 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
   const deleteEvent = async () => {
     if (!modalEvent?.id) return
     const res = await fetch(`/api/events/${modalEvent.id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error()
+    setModalEvent(undefined)
+    fetchEvents()
+  }
+
+  const deleteEventGroup = async () => {
+    if (!modalEvent?.repeat_group_id) return
+    const res = await fetch(`/api/events?group_id=${modalEvent.repeat_group_id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error()
     setModalEvent(undefined)
     fetchEvents()
@@ -450,31 +459,51 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
               </div>
             )}
 
-            {/* 시간대 */}
-            <div className="relative">
+            {/* 시간대 — 절대 위치 렌더링 (시작~종료 시간 범위 표시) */}
+            <div className="relative" style={{ height: `${24 * 48}px` }}>
+              {/* 배경 그리드 라인 */}
               {HOURS.map(h => (
-                <div key={h} className="grid grid-cols-8 border-b border-gray-100" style={{ minHeight: '48px' }}>
-                  <div className="pr-2 pt-1 text-right text-[10px] text-gray-400 leading-none">{pad(h)}:00</div>
-                  {weekDays.map((d, i) => {
-                    const dayEvts = eventsOnDate(toDateStr(d)).filter(e => {
-                      if (e.is_allday) return false
-                      const sh = new Date(e.start_at).getHours()
-                      return sh === h
-                    })
-                    return (
-                      <div key={i} className={`border-l border-gray-100 px-0.5 py-0.5 relative ${toDateStr(d) === todayStr ? 'bg-blue-50/30' : ''}`}>
-                        {dayEvts.map(ev => (
-                          <button key={ev.id} onClick={() => setModalEvent(ev)}
-                            className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium mb-0.5 ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}>
-                            <span className="opacity-70">{fmtTime(ev.start_at)}</span>{' '}
-                            <span className="truncate block">{ev.title}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )
-                  })}
+                <div key={h} className="absolute w-full flex border-b border-gray-100"
+                  style={{ top: `${h * 48}px`, height: '48px' }}>
+                  <div className="flex-shrink-0 pr-2 pt-1 text-right text-[10px] text-gray-400 leading-none"
+                    style={{ width: '12.5%' }}>
+                    {pad(h)}:00
+                  </div>
+                  {weekDays.map((d, i) => (
+                    <div key={i}
+                      className={`flex-1 border-l border-gray-100 ${toDateStr(d) === todayStr ? 'bg-blue-50/30' : ''}`} />
+                  ))}
                 </div>
               ))}
+
+              {/* 이벤트 오버레이 */}
+              {weekDays.map((d, di) => {
+                const dayEvts = eventsOnDate(toDateStr(d)).filter(e => !e.is_allday)
+                return dayEvts.map(ev => {
+                  const startD   = new Date(ev.start_at)
+                  const endD     = new Date(ev.end_at)
+                  const startMin = startD.getHours() * 60 + startD.getMinutes()
+                  const endMin   = endD.getHours() * 60 + endD.getMinutes()
+                  const top      = startMin * 48 / 60
+                  const height   = Math.max((endMin - startMin) * 48 / 60, 20)
+                  return (
+                    <button
+                      key={ev.id}
+                      onClick={() => setModalEvent(ev)}
+                      className={`absolute rounded px-1 py-0.5 text-[10px] font-medium overflow-hidden text-left ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}
+                      style={{
+                        top:    `${top}px`,
+                        height: `${height}px`,
+                        left:   `calc(${(di + 1) * 100 / 8}% + 1px)`,
+                        width:  `calc(${100 / 8}% - 2px)`,
+                      }}
+                    >
+                      <span className="opacity-70">{fmtTime(ev.start_at)}</span>{' '}
+                      <span className="truncate block">{ev.title}</span>
+                    </button>
+                  )
+                })
+              })}
             </div>
           </div>
         </div>
@@ -491,6 +520,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
           isAdmin={isAdmin}
           onSave={saveEvent}
           onDelete={modalEvent?.id ? deleteEvent : undefined}
+          onDeleteAll={modalEvent?.repeat_group_id ? deleteEventGroup : undefined}
           onClose={() => { setModalEvent(undefined) }}
         />
       )}

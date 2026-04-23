@@ -16,6 +16,7 @@ export interface CalendarEvent {
   user_id?: string
   organization?: string
   agency_type?: string
+  repeat_group_id?: string
 }
 
 const COLORS = [
@@ -131,6 +132,7 @@ interface Props {
   isAdmin?: boolean
   onSave: (data: Partial<CalendarEvent> | Partial<CalendarEvent>[]) => Promise<void>
   onDelete?: () => Promise<void>
+  onDeleteAll?: () => Promise<void>
   onClose: () => void
 }
 
@@ -143,6 +145,7 @@ export default function EventModal({
   isAdmin = false,
   onSave,
   onDelete,
+  onDeleteAll,
   onClose,
 }: Props) {
   const isEdit   = !!event?.id
@@ -239,6 +242,13 @@ export default function EventModal({
     if (!confirm('이 일정을 삭제하시겠습니까?')) return
     setDeleting(true)
     try { await onDelete() } catch { setError('삭제 중 오류가 발생했습니다.') } finally { setDeleting(false) }
+  }
+
+  const handleDeleteAll = async () => {
+    if (!onDeleteAll) return
+    if (!confirm('반복 일정 전체를 삭제하시겠습니까?')) return
+    setDeleting(true)
+    try { await onDeleteAll() } catch { setError('삭제 중 오류가 발생했습니다.') } finally { setDeleting(false) }
   }
 
   return (
@@ -371,24 +381,6 @@ export default function EventModal({
             </div>
           </div>
 
-          {/* 색상 */}
-          {canEdit && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">색상</label>
-              <div className="flex gap-2">
-                {COLORS.map(c => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setColor(c.value as CalendarEvent['color'])}
-                    title={c.label}
-                    className={`w-7 h-7 rounded-full ${c.bg} transition-all ${color === c.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'opacity-60 hover:opacity-100'}`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* 상세 내용 */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">상세 내용</label>
@@ -427,13 +419,32 @@ export default function EventModal({
         {/* 버튼 */}
         <div className="px-5 pb-5 flex gap-2">
           {isEdit && canEdit && onDelete && (
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2.5 border border-red-200 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
-            >
-              {deleting ? '삭제 중...' : '삭제'}
-            </button>
+            event?.repeat_group_id && onDeleteAll ? (
+              <>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-3 py-2.5 border border-red-200 text-red-600 text-xs font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
+                >
+                  {deleting ? '삭제 중...' : '이 일정만'}
+                </button>
+                <button
+                  onClick={handleDeleteAll}
+                  disabled={deleting}
+                  className="px-3 py-2.5 border border-red-200 text-red-600 text-xs font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
+                >
+                  {deleting ? '삭제 중...' : '전체 삭제'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2.5 border border-red-200 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            )
           )}
           <button
             onClick={onClose}

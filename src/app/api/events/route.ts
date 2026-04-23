@@ -68,6 +68,32 @@ export async function GET(request: Request) {
   return NextResponse.json(data ?? [])
 }
 
+export async function DELETE(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const groupId = searchParams.get('group_id')
+  if (!groupId) return NextResponse.json({ error: 'group_id required' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  let query = admin.from('events').delete().eq('repeat_group_id', groupId)
+  if (profile?.role !== 'super_admin') {
+    query = query.eq('user_id', user.id)
+  }
+
+  const { error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
