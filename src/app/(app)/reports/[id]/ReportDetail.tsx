@@ -707,14 +707,12 @@ export default function ReportDetail({
               )}
             </>
           )}
-          {report.status !== 'approved' && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-full bg-white border border-red-200 text-red-500 font-medium py-2.5 rounded-xl text-sm hover:bg-red-50 transition-colors"
-            >
-              보고서 삭제
-            </button>
-          )}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full bg-white border border-red-200 text-red-500 font-medium py-2.5 rounded-xl text-sm hover:bg-red-50 transition-colors"
+          >
+            보고서 삭제
+          </button>
         </div>
       )}
 
@@ -737,6 +735,9 @@ export default function ReportDetail({
               <span className="font-medium text-gray-900">{report.period_label}</span> 보고서를 삭제하시겠습니까?
               {attachments.length > 0 && (
                 <span className="block mt-1 text-xs text-gray-400">첨부파일 {attachments.length}개도 함께 삭제됩니다.</span>
+              )}
+              {report.status === 'approved' && (
+                <span className="block mt-1 text-xs text-amber-600">승인 시 생성된 캘린더 일정도 함께 삭제됩니다.</span>
               )}
             </p>
             <div className="flex gap-2">
