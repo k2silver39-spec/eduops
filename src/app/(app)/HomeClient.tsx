@@ -30,13 +30,11 @@ const COLOR_PILL: Record<string, string> = {
   gray:   'bg-gray-100 text-gray-600',
 }
 
-const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
-function getMondayOf(date: Date): Date {
+function getSundayOf(date: Date): Date {
   const d = new Date(date)
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
+  d.setDate(d.getDate() - d.getDay())
   d.setHours(0, 0, 0, 0)
   return d
 }
@@ -46,7 +44,7 @@ function toDateKey(date: Date): string {
 }
 
 export default function HomeClient() {
-  const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()))
+  const [weekStart, setWeekStart] = useState<Date>(() => getSundayOf(new Date()))
   const [events, setEvents] = useState<CalEvent[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -105,7 +103,7 @@ export default function HomeClient() {
             </svg>
           </button>
           <button
-            onClick={() => setWeekStart(getMondayOf(new Date()))}
+            onClick={() => setWeekStart(getSundayOf(new Date()))}
             className="text-xs px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
           >
             오늘
@@ -127,8 +125,8 @@ export default function HomeClient() {
           {weekDays.map((d, i) => {
             const key = toDateKey(d)
             const isToday = key === todayKey
-            const isSat = i === 5
-            const isSun = i === 6
+            const isSun = i === 0
+            const isSat = i === 6
             return (
               <div key={key} className="flex flex-col items-center py-2 gap-0.5">
                 <span className={`text-[10px] font-medium ${isSat ? 'text-blue-500' : isSun ? 'text-red-500' : 'text-gray-400'}`}>

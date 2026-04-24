@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import HomeClient from './HomeClient'
+import TodayEventsClient from './TodayEventsClient'
 
 interface FeatureCard {
   href: string
@@ -12,16 +13,6 @@ interface FeatureCard {
 }
 
 const featureCards: FeatureCard[] = [
-  {
-    href: '/notices',
-    label: '공지사항',
-    description: '공지 및 안내 확인',
-    icon: (
-      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 1 8.835-2.535m0 0A23.74 23.74 0 0 1 18.795 3c1.167 0 2.31.23 3.352.645m-3.879 14.84a23.74 23.74 0 0 0 3.879.515c1.167 0 2.31-.23 3.352-.645" />
-      </svg>
-    ),
-  },
   {
     href: '/ai-qa',
     label: 'AI 질의응답',
@@ -92,20 +83,11 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const adminClient = createAdminClient()
-  const [{ data: profile }, { data: notices }] = await Promise.all([
-    adminClient
-      .from('profiles')
-      .select('name, organization, role')
-      .eq('id', user!.id)
-      .single(),
-    adminClient
-      .from('notices')
-      .select('id, title, is_pinned, created_at')
-      .eq('is_active', true)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(3),
-  ])
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('name, organization, role')
+    .eq('id', user!.id)
+    .single()
 
   const isAdmin = profile?.role === 'super_admin'
   const visibleCards = featureCards.filter(c => !c.adminOnly || isAdmin)
@@ -120,30 +102,8 @@ export default async function HomePage() {
         <p className="text-sm text-gray-500 mt-0.5">{profile?.organization}</p>
       </div>
 
-      {/* Notices Section */}
-      {notices && notices.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-700">공지사항</h2>
-            <Link href="/notices" className="text-xs text-blue-600 hover:underline">더보기</Link>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            {notices.map((n) => (
-              <Link
-                key={n.id}
-                href="/notices"
-                className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors"
-              >
-                {n.is_pinned && <span className="text-orange-500 text-xs shrink-0">📌</span>}
-                <span className="text-sm text-gray-800 flex-1 truncate">{n.title}</span>
-                <span className="text-xs text-gray-400 shrink-0">
-                  {new Date(n.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Today Events */}
+      <TodayEventsClient />
 
       {/* Weekly Calendar */}
       <HomeClient />

@@ -20,10 +20,14 @@ export async function GET(request: Request) {
   let from: Date
   let to: Date
 
+  const dateParam  = searchParams.get('date')
   const startParam = searchParams.get('start')
   const endParam   = searchParams.get('end')
 
-  if (startParam && endParam) {
+  if (dateParam) {
+    from = new Date(`${dateParam}T00:00:00.000Z`)
+    to   = new Date(`${dateParam}T23:59:59.999Z`)
+  } else if (startParam && endParam) {
     from = new Date(`${startParam}T00:00:00.000Z`)
     to   = new Date(`${endParam}T23:59:59.999Z`)
   } else {
