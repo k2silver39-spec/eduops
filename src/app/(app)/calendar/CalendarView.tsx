@@ -141,7 +141,15 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
     fetchEvents()
   }
 
-  const deleteEventGroup = async () => {
+  const deleteEventsByTitle = async () => {
+    if (!modalEvent?.title) return
+    const res = await fetch(`/api/events?title=${encodeURIComponent(modalEvent.title)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error()
+    setModalEvent(undefined)
+    fetchEvents()
+  }
+
+  const deleteEventsByGroup = async () => {
     if (!modalEvent?.repeat_group_id) return
     const res = await fetch(`/api/events?group_id=${modalEvent.repeat_group_id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error()
@@ -520,7 +528,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
           isAdmin={isAdmin}
           onSave={saveEvent}
           onDelete={modalEvent?.id ? deleteEvent : undefined}
-          onDeleteAll={modalEvent?.repeat_group_id ? deleteEventGroup : undefined}
+          onDeleteAll={modalEvent?.id ? (modalEvent.repeat_group_id ? deleteEventsByGroup : deleteEventsByTitle) : undefined}
           onClose={() => { setModalEvent(undefined) }}
         />
       )}

@@ -171,6 +171,15 @@ export default function EventModal({
   const [endType,     setEndType]     = useState<EndType>('count')
   const [repeatCount, setRepeatCount] = useState<number>(4)
   const [repeatUntil, setRepeatUntil] = useState<string>('')
+  const [repeatStartDate, setRepeatStartDate] = useState(
+    event?.start_at ? toLocalDate(event.start_at) : (defaultDate ?? toLocalDate(new Date().toISOString()))
+  )
+  const [startTime, setStartTime] = useState(
+    event?.start_at && !event?.is_allday ? toLocalDatetime(event.start_at).slice(11, 16) : '09:00'
+  )
+  const [endTime, setEndTime] = useState(
+    event?.end_at && !event?.is_allday ? toLocalDatetime(event.end_at).slice(11, 16) : '18:00'
+  )
   const [saving,             setSaving]             = useState(false)
   const [deleting,           setDeleting]           = useState(false)
   const [showDeleteConfirm,  setShowDeleteConfirm]  = useState(false)
@@ -187,30 +196,42 @@ export default function EventModal({
     }
   }, [isAllday])
 
+  const isRepeating = !isEdit && repeatType !== 'none'
+
   const handleSave = async () => {
     if (!title.trim()) { setError('제목을 입력해 주세요.'); return }
-    if (!startVal || !endVal) { setError('날짜를 입력해 주세요.'); return }
 
-    const toIsoStart = (v: string) =>
-      isAllday ? new Date(v + 'T00:00:00').toISOString() : new Date(v).toISOString()
-    const toIsoEnd = (v: string) =>
-      isAllday ? new Date(v + 'T23:59:59').toISOString() : new Date(v).toISOString()
+    let firstStart = '', firstEnd = ''
 
-    const firstStart = toIsoStart(startVal)
-    const firstEnd   = toIsoEnd(endVal)
-    if (new Date(firstStart) > new Date(firstEnd)) {
-      setError('종료 일시는 시작 일시 이후여야 합니다.'); return
-    }
-
-    const isRepeating = !isEdit && repeatType !== 'none'
-    if (isRepeating && (repeatType === 'weekly' || repeatType === 'biweekly') && weekdays.length === 0) {
-      setError('반복 요일을 1개 이상 선택해 주세요.'); return
-    }
-    if (isRepeating && !repeatUntil) {
-      setError('반복 종료일을 입력해 주세요.'); return
-    }
-    if (isRepeating && repeatUntil && repeatUntil < startVal.split('T')[0]) {
-      setError('반복 종료일은 시작일 이후여야 합니다.'); return
+    if (isRepeating) {
+      if (!repeatStartDate) { setError('반복 시작일을 입력해 주세요.'); return }
+      if (!repeatUntil) { setError('반복 종료일을 입력해 주세요.'); return }
+      if (repeatUntil < repeatStartDate) { setError('반복 종료일은 시작일 이후여야 합니다.'); return }
+      if ((repeatType === 'weekly' || repeatType === 'biweekly') && weekdays.length === 0) {
+        setError('반복 요일을 1개 이상 선택해 주세요.'); return
+      }
+      if (isAllday) {
+        firstStart = new Date(repeatStartDate + 'T00:00:00').toISOString()
+        firstEnd   = new Date(repeatStartDate + 'T23:59:59').toISOString()
+      } else {
+        if (!startTime || !endTime) { setError('시작/종료 시간을 입력해 주세요.'); return }
+        firstStart = new Date(repeatStartDate + 'T' + startTime + ':00').toISOString()
+        firstEnd   = new Date(repeatStartDate + 'T' + endTime   + ':00').toISOString()
+        if (new Date(firstStart) >= new Date(firstEnd)) {
+          setError('종료 시간은 시작 시간 이후여야 합니다.'); return
+        }
+      }
+    } else {
+      if (!startVal || !endVal) { setError('날짜를 입력해 주세요.'); return }
+      const toIsoStart = (v: string) =>
+        isAllday ? new Date(v + 'T00:00:00').toISOString() : new Date(v).toISOString()
+      const toIsoEnd = (v: string) =>
+        isAllday ? new Date(v + 'T23:59:59').toISOString() : new Date(v).toISOString()
+      firstStart = toIsoStart(startVal)
+      firstEnd   = toIsoEnd(endVal)
+      if (new Date(firstStart) > new Date(firstEnd)) {
+        setError('종료 일시는 시작 일시 이후여야 합니다.'); return
+      }
     }
 
     setSaving(true); setError('')
@@ -251,11 +272,7 @@ export default function EventModal({
   }
 
   const handleDeleteClick = () => {
-    if (event?.repeat_group_id && onDeleteAll) {
-      setShowDeleteConfirm(true)
-    } else {
-      handleDelete()
-    }
+    setShowDeleteConfirm(true)
   }
 
   return (
@@ -294,18 +311,20 @@ export default function EventModal({
             />
           </div>
 
-          {/* 종일 토글 */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600">종일</span>
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() => setIsAllday(v => !v)}
-              className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${isAllday ? 'bg-blue-600' : 'bg-gray-300'}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isAllday ? 'translate-x-5' : 'translate-x-0'}`} />
-            </button>
-          </div>
+          {/* 종일 토글 — 반복 모드 아닐 때만 최상단에 표시 */}
+          {(isEdit || repeatType === 'none') && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-600">종일</span>
+              <button
+                type="button"
+                disabled={!canEdit}
+                onClick={() => setIsAllday(v => !v)}
+                className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${isAllday ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isAllday ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          )}
 
           {/* 반복 설정 — 신규 등록에서만 표시 */}
           {!isEdit && canEdit && (
@@ -337,13 +356,17 @@ export default function EventModal({
 
               {repeatType !== 'none' && (
                 <div className="bg-gray-50 rounded-lg px-3 py-2.5 space-y-2">
+                  {/* 반복 기간 (날짜) */}
                   <p className="text-xs font-medium text-gray-600">반복 기간</p>
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
-                      <p className="text-[10px] text-gray-400 mb-1">시작일</p>
-                      <div className="px-2.5 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-700">
-                        {startVal ? startVal.split('T')[0] : '—'}
-                      </div>
+                      <p className="text-[10px] text-gray-400 mb-1">시작일 <span className="text-red-400">*</span></p>
+                      <input
+                        type="date"
+                        value={repeatStartDate}
+                        onChange={e => setRepeatStartDate(e.target.value)}
+                        className="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
                     </div>
                     <span className="text-gray-400 pb-2">~</span>
                     <div className="flex-1">
@@ -351,19 +374,56 @@ export default function EventModal({
                       <input
                         type="date"
                         value={repeatUntil}
-                        min={startVal ? startVal.split('T')[0] : undefined}
+                        min={repeatStartDate || undefined}
                         onChange={e => setRepeatUntil(e.target.value)}
                         className="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
                   </div>
+
+                  {/* 종일 토글 (반복 모드 내) */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] text-gray-500">종일</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAllday(v => !v)}
+                      className={`relative w-9 h-4.5 rounded-full transition-colors ${isAllday ? 'bg-blue-600' : 'bg-gray-300'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-transform ${isAllday ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* 반복 시간 (종일이 아닐 때) */}
+                  {!isAllday && (
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-400 mb-1">시작 시간</p>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={e => setStartTime(e.target.value)}
+                          className="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+                      <span className="text-gray-400 pb-2">~</span>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-400 mb-1">종료 시간</p>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={e => setEndTime(e.target.value)}
+                          className="w-full px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* 날짜/시간 */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* 날짜/시간 — 반복 모드일 때는 반복 섹션 내에서 입력하므로 숨김 */}
+          {(isEdit || repeatType === 'none') && <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">시작</label>
               <input
@@ -384,7 +444,7 @@ export default function EventModal({
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 transition"
               />
             </div>
-          </div>
+          </div>}
 
           {/* 상세 내용 */}
           <div>
@@ -455,29 +515,56 @@ export default function EventModal({
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 px-4">
         <div className="bg-white rounded-2xl shadow-2xl p-5 w-full max-w-xs">
           <p className="text-sm font-semibold text-gray-900 mb-1">일정 삭제</p>
-          <p className="text-xs text-gray-500 mb-4">삭제 범위를 선택해 주세요.</p>
-          <div className="space-y-2">
-            <button
-              onClick={async () => { setShowDeleteConfirm(false); await handleDelete() }}
-              disabled={deleting}
-              className="w-full py-2.5 border border-red-200 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
-            >
-              이 일정만 삭제
-            </button>
-            <button
-              onClick={async () => { setShowDeleteConfirm(false); await handleDeleteAll() }}
-              disabled={deleting}
-              className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 transition"
-            >
-              반복 일정 전체 삭제
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(false)}
-              className="w-full py-2.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition"
-            >
-              취소
-            </button>
-          </div>
+          {onDeleteAll ? (
+            <>
+              <p className="text-xs text-gray-500 mb-4">
+                {event?.repeat_group_id
+                  ? '반복 일정 전체를 삭제하시겠습니까, 아니면 이 일정만 삭제하시겠습니까?'
+                  : '동일한 제목으로 작성된 일정을 모두 삭제하시겠습니까, 아니면 이 일정만 삭제하시겠습니까?'}
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={async () => { setShowDeleteConfirm(false); await handleDeleteAll() }}
+                  disabled={deleting}
+                  className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 transition"
+                >
+                  {event?.repeat_group_id ? '반복 일정 전체 삭제' : '동일 제목 일정 전체 삭제'}
+                </button>
+                <button
+                  onClick={async () => { setShowDeleteConfirm(false); await handleDelete() }}
+                  disabled={deleting}
+                  className="w-full py-2.5 border border-red-200 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 disabled:opacity-50 transition"
+                >
+                  이 일정만 삭제
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="w-full py-2.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition"
+                >
+                  취소
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-4">이 일정을 삭제하시겠습니까?</p>
+              <div className="space-y-2">
+                <button
+                  onClick={async () => { setShowDeleteConfirm(false); await handleDelete() }}
+                  disabled={deleting}
+                  className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 transition"
+                >
+                  삭제
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="w-full py-2.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition"
+                >
+                  취소
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )}

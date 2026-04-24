@@ -9,7 +9,7 @@ async function getAuthContext(reportId: string) {
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: report }] = await Promise.all([
-    admin.from('profiles').select('role, organization').eq('id', user.id).single(),
+    admin.from('profiles').select('role, organization, agency_type').eq('id', user.id).single(),
     admin.from('reports').select('*, author:profiles!user_id(name)').eq('id', reportId).single(),
   ])
 
@@ -96,6 +96,136 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 주간보고 제출 시 캘린더 일정 생성/갱신
+  if ((body.status === 'submitted' || body.status === 'resubmitted') && data && (data as { type?: string }).type === 'weekly') {
+    const rep = data as {
+      type: string; period_start: string
+      content: { activity_rows?: { current_week: string; next_week: string }[] } | null
+    }
+    const refYear = parseInt(rep.period_start.split('-')[0])
+    const agencyType = (profile as { agency_type?: string } | null)?.agency_type ?? ''
+
+    // 기존 이벤트 삭제 후 재생성 (재제출 시 내용 갱신 반영)
+    await admin.from('events').delete().eq('source', 'report').eq('source_id', id)
+
+    const LABELS = ['직무교육', '대외협력 및 홍보', '기타']
+    const activityRows = rep.content?.activity_rows ?? []
+    const datedEvents: { date: string; title: string }[] = []
+
+    function extractDated(text: string, label: string): void {
+      if (!text?.trim()) return
+      // 줄바꿈 및 한국어 불릿·쉼표로 분리
+      const lines = text.split(/[\n·•]/).map(s => s.trim()).filter(Boolean)
+
+      for (const raw of lines) {
+        let dateStr: string | null = null
+        let matchIdx = 0
+        let matchLen = 0
+        let m: RegExpMatchArray | null
+
+        // YYYY-MM-DD
+        m = raw.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+        if (m) {
+          dateStr = `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`
+          matchIdx = m.index ?? 0; matchLen = m[0].length
+        }
+
+        // M월 D일
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})월\s*(\d{1,2})일/)
+          if (m) {
+            dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`
+            matchIdx = m.index ?? 0; matchLen = m[0].length
+          }
+        }
+
+        // M/D(요일) 또는 M/D — 괄호 안 요일은 매치에 포함
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})\/(\d{1,2})(?:\([가-힣]+\))?/)
+          if (m) {
+            const mon = parseInt(m[1]), day = parseInt(m[2])
+            if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) {
+              dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`
+              matchIdx = m.index ?? 0; matchLen = m[0].length
+            }
+          }
+        }
+
+        // M.D. 또는 M. D. (점 사이 공백 허용, 예: 4.23. / 4. 23.)
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})\.\s*(\d{1,2})\.?/)
+          if (m) {
+            const mon = parseInt(m[1]), day = parseInt(m[2])
+            if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) {
+              dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`
+              matchIdx = m.index ?? 0; matchLen = m[0].length
+            }
+          }
+        }
+
+        // M-D (연도 없이 하이픈, 예: 4-23)
+        if (!dateStr) {
+          m = raw.match(/(?<!\d)(\d{1,2})-(\d{1,2})(?!\d)/)
+          if (m) {
+            const mon = parseInt(m[1]), day = parseInt(m[2])
+            if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) {
+              dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`
+              matchIdx = m.index ?? 0; matchLen = m[0].length
+            }
+          }
+        }
+
+        if (!dateStr) continue
+
+        // 날짜 앞뒤 텍스트 추출
+        const beforeRaw = raw.slice(0, matchIdx)
+        const afterRaw  = raw.slice(matchIdx + matchLen)
+
+        // 뒤쪽: 닫는 괄호·공백·구분자 제거
+        const cleanAfter  = afterRaw.replace(/^[\s\)\]\.,~]+/, '').trim()
+        // 앞쪽: 열린 괄호·공백·~·구분자 제거
+        const cleanBefore = beforeRaw.replace(/[\s\(\[~\-:]+$/, '').trim()
+
+        // 제목 결정: 뒤에 의미 있는 텍스트가 있으면 뒤, 없으면 앞 사용
+        // (%·단위 기호로 시작하면 수치이므로 제외)
+        let title = ''
+        if (cleanAfter && !/^[%℃㎞㎡㎏]/.test(cleanAfter)) {
+          title = cleanAfter
+        } else if (cleanBefore) {
+          title = cleanBefore
+        }
+
+        if (!title) continue
+        datedEvents.push({ date: dateStr, title: `[${label}] ${title}` })
+      }
+    }
+
+    for (let i = 0; i < activityRows.length; i++) {
+      const label = LABELS[i] ?? `활동${i + 1}`
+      extractDated(activityRows[i].current_week ?? '', label)
+      extractDated(activityRows[i].next_week ?? '', label)
+    }
+
+    if (datedEvents.length > 0) {
+      await admin.from('events').insert(
+        datedEvents.map(ev => ({
+          user_id:      user.id,
+          organization: profile?.organization ?? '',
+          agency_type:  agencyType,
+          title:        ev.title,
+          description:  '',
+          start_at:     `${ev.date}T00:00:00.000Z`,
+          end_at:       `${ev.date}T14:59:59.000Z`,
+          is_allday:    true,
+          color:        'gray' as const,
+          source:       'report',
+          source_id:    id,
+          is_public:    false,
+        }))
+      )
+    }
+  }
 
   // 첨부파일 삭제
   const removeIds: string[] = Array.isArray(body.removeAttachmentIds) ? body.removeAttachmentIds : []

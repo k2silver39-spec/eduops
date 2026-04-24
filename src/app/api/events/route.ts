@@ -75,7 +75,8 @@ export async function DELETE(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const groupId = searchParams.get('group_id')
-  if (!groupId) return NextResponse.json({ error: 'group_id required' }, { status: 400 })
+  const title   = searchParams.get('title')
+  if (!groupId && !title) return NextResponse.json({ error: 'group_id or title required' }, { status: 400 })
 
   const admin = createAdminClient()
   const { data: profile } = await admin
@@ -84,13 +85,19 @@ export async function DELETE(request: Request) {
     .eq('id', user.id)
     .single()
 
-  let query = admin.from('events').delete().eq('repeat_group_id', groupId)
-  if (profile?.role !== 'super_admin') {
-    query = query.eq('user_id', user.id)
+  if (groupId) {
+    let query = admin.from('events').delete().eq('repeat_group_id', groupId)
+    if (profile?.role !== 'super_admin') query = query.eq('user_id', user.id)
+    const { error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else {
+    // 제목 기반 삭제: 본인 소유 이벤트에 한정
+    const { error } = await admin.from('events').delete()
+      .eq('title', title!)
+      .eq('user_id', user.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const { error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
 
@@ -110,7 +117,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { title, description, start_at, end_at, is_allday, color, is_public } = body
+  const { title, description, start_at, end_at, is_allday, color, is_public, repeat_group_id } = body
 
   if (!title?.trim() || !start_at || !end_at) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -133,6 +140,7 @@ export async function POST(request: Request) {
       color:        color ?? 'blue',
       is_public:    canPublish ? (is_public ?? false) : false,
       source:       'manual',
+      ...(repeat_group_id ? { repeat_group_id } : {}),
     })
     .select()
     .single()
