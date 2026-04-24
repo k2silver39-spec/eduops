@@ -8,10 +8,9 @@ interface ImportedEvent {
   session: string
   title: string
   date_label: string
-  day_of_week: string
   start_at: string
   end_at: string
-  duration_hours: number
+  duration_hours: number | null
   participants: string
   is_allday: boolean
   description: string
@@ -95,7 +94,6 @@ export default function ImportModal({ onImport, onClose }: Props) {
     setEvents(evs => evs.map((e, idx) => idx === i ? { ...e, selected: !e.selected } : e))
 
   const selectedCount = events.filter(e => e.selected).length
-  const allSelected   = events.length > 0 && selectedCount === events.length
 
   const handleImport = async () => {
     const selected = events.filter(e => e.selected)
@@ -104,7 +102,7 @@ export default function ImportModal({ onImport, onClose }: Props) {
     setError('')
     try {
       await onImport(
-        selected.map(({ selected: _s, course_name: _c, session: _se, date_label: _dl, day_of_week: _dw, duration_hours: _d, participants: _p, ...rest }) => ({
+        selected.map(({ selected: _s, course_name: _c, session: _se, date_label: _dl, duration_hours: _d, participants: _p, ...rest }) => ({
           ...rest,
           color:  'blue'     as const,
           source: 'document' as const,
