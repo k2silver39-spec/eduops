@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization, status')
+    .select('organization, agency_type, status')
     .eq('id', user.id)
     .single()
 
@@ -116,6 +116,81 @@ export async function POST(request: Request) {
         size: a.size,
       }))
     )
+  }
+
+  // 주간보고 최초 제출 시 캘린더 일정 생성
+  if (status === 'submitted' && type === 'weekly') {
+    const refYear = parseInt(period_start.split('-')[0])
+    const agencyType = (profile as { agency_type?: string }).agency_type ?? ''
+    const LABELS = ['직무교육', '대외협력 및 홍보', '기타']
+    const activityRows = (content as { activity_rows?: { current_week: string; next_week: string }[] }).activity_rows ?? []
+    const datedEvents: { date: string; title: string }[] = []
+
+    function extractDated(text: string, label: string): void {
+      if (!text?.trim()) return
+      const lines = text.split(/[\n·•]/).map((s: string) => s.trim()).filter(Boolean)
+      for (const raw of lines) {
+        let dateStr: string | null = null
+        let matchIdx = 0; let matchLen = 0
+        let m: RegExpMatchArray | null
+
+        m = raw.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+        if (m) { dateStr = `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`; matchIdx = m.index ?? 0; matchLen = m[0].length }
+
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})월\s*(\d{1,2})일/)
+          if (m) { dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; matchIdx = m.index ?? 0; matchLen = m[0].length }
+        }
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})\/(\d{1,2})(?:\([가-힣]+\))?/)
+          if (m) { const mon = parseInt(m[1]), day = parseInt(m[2]); if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) { dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; matchIdx = m.index ?? 0; matchLen = m[0].length } }
+        }
+        if (!dateStr) {
+          m = raw.match(/(\d{1,2})\.\s*(\d{1,2})\.?/)
+          if (m) { const mon = parseInt(m[1]), day = parseInt(m[2]); if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) { dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; matchIdx = m.index ?? 0; matchLen = m[0].length } }
+        }
+        if (!dateStr) {
+          m = raw.match(/(?<!\d)(\d{1,2})-(\d{1,2})(?!\d)/)
+          if (m) { const mon = parseInt(m[1]), day = parseInt(m[2]); if (mon >= 1 && mon <= 12 && day >= 1 && day <= 31) { dateStr = `${refYear}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; matchIdx = m.index ?? 0; matchLen = m[0].length } }
+        }
+
+        if (!dateStr) continue
+        const beforeRaw = raw.slice(0, matchIdx)
+        const afterRaw  = raw.slice(matchIdx + matchLen)
+        const cleanAfter  = afterRaw.replace(/^[\s\)\]\.,~]+/, '').trim()
+        const cleanBefore = beforeRaw.replace(/[\s\(\[~\-:]+$/, '').trim()
+        let title = ''
+        if (cleanAfter && !/^[%℃㎞㎡㎏]/.test(cleanAfter)) { title = cleanAfter }
+        else if (cleanBefore) { title = cleanBefore }
+        if (!title) continue
+        datedEvents.push({ date: dateStr, title: `[${label}] ${title}` })
+      }
+    }
+
+    for (let i = 0; i < activityRows.length; i++) {
+      const label = LABELS[i] ?? `활동${i + 1}`
+      extractDated(activityRows[i].current_week ?? '', label)
+      extractDated(activityRows[i].next_week ?? '', label)
+    }
+
+    if (datedEvents.length > 0) {
+      await admin.from('events').insert(
+        datedEvents.map(ev => ({
+          user_id:      user.id,
+          organization: profile.organization,
+          agency_type:  agencyType,
+          title:        ev.title,
+          description:  '',
+          start_at:     `${ev.date}T00:00:00.000Z`,
+          end_at:       `${ev.date}T14:59:59.000Z`,
+          is_allday:    true,
+          color:        'gray' as const,
+          source:       'report',
+          source_id:    data.id,
+          is_public:    false,
+        }))
+      )
+    }
   }
 
   return NextResponse.json({ id: data.id })
