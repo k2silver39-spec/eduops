@@ -9,6 +9,7 @@ const items = [
   { href: '/admin/inquiries', label: '문의' },
   { href: '/admin/reports', label: '리포트' },
   { href: '/admin/documents', label: '문서' },
+  { href: '/admin/notices', label: '공지사항' },
 ]
 
 export default function AdminNav() {

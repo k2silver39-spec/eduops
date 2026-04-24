@@ -16,14 +16,24 @@ export async function GET(request: Request) {
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
-  const year  = parseInt(searchParams.get('year')  ?? String(new Date().getFullYear()))
-  const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
 
-  // 해당 월 전체 범위 (전후 한 주씩 여유)
-  const from = new Date(year, month - 1, 1)
-  from.setDate(from.getDate() - 7)
-  const to = new Date(year, month, 1)
-  to.setDate(to.getDate() + 7)
+  let from: Date
+  let to: Date
+
+  const startParam = searchParams.get('start')
+  const endParam   = searchParams.get('end')
+
+  if (startParam && endParam) {
+    from = new Date(`${startParam}T00:00:00.000Z`)
+    to   = new Date(`${endParam}T23:59:59.999Z`)
+  } else {
+    const year  = parseInt(searchParams.get('year')  ?? String(new Date().getFullYear()))
+    const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
+    from = new Date(year, month - 1, 1)
+    from.setDate(from.getDate() - 7)
+    to = new Date(year, month, 1)
+    to.setDate(to.getDate() + 7)
+  }
 
   if (profile.role !== 'super_admin') {
     // Two separate queries to avoid PostgREST string-parse issues with Korean org names

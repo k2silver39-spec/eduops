@@ -1,6 +1,6 @@
 # eduops — 구현 현황 문서
 
-> 기준일: 2026-04-22 (캘린더 기능 추가)  
+> 기준일: 2026-04-24 (공지사항 기능 추가 + 홈 화면 개편)  
 > 서비스: https://eduops-sigma.vercel.app  
 > 저장소: https://github.com/k2silver39-spec/eduops (master 브랜치 자동 배포)
 
@@ -26,7 +26,9 @@
 | 기능 | 비고 |
 |------|------|
 | 사용자 이름·기관 표시 | profiles 테이블에서 조회 |
-| 기능 카드 그리드 | AI 질의응답, 문의 게시판, 리포트, 캘린더, 내 정보, 관리자 대시보드(super_admin 전용) |
+| 공지사항 섹션 | 최신 공지 3건, 📌 고정 공지 상단, "더보기" → /notices, 공지 없으면 숨김 |
+| 주간 캘린더 | 월~일 7일 그리드, 오늘 강조, 데스크탑: 이벤트 pill 2개 + "+N", 모바일: 색상 도트, 이전/다음 주 네비 |
+| 기능 카드 그리드 | 공지사항, AI 질의응답, 문의 게시판, 리포트, 캘린더, 내 정보, 관리자 대시보드(super_admin 전용) |
 | 관리자 카드 조건부 표시 | role === 'super_admin' 인 경우에만 노출 |
 
 ### 3. AI 질의응답
@@ -91,7 +93,18 @@
 | 문서 일정 추출 | PDF/DOCX 업로드 → GPT-4o-mini AI 추출 → 선택적 캘린더 추가 (임시 파일 자동 삭제) |
 | 관리자 기관 필터 | super_admin: 기관별 일정 필터 드롭다운 |
 
-### 8. 관리자 대시보드 (super_admin 전용)
+### 8. 공지사항
+
+| 기능 | 경로 | 비고 |
+|------|------|------|
+| 공지 목록 조회 | `/notices` | 페이지네이션(10건), 📌 고정 공지 상단, 클릭 시 상세 모달 |
+| 공지 상세 모달 | `/notices` | 슬라이드업 모달, 제목/작성일/내용 표시 |
+| 공지 관리 (관리자) | `/admin/notices` | 목록(비활성 포함), 생성/수정/삭제, 📌 고정 토글, 활성화 토글 |
+| 공지 API | `/api/notices` | GET(최신 5건), POST(super_admin) |
+| 공지 전체 API | `/api/notices/all` | GET(페이지네이션, 관리자는 비활성 포함) |
+| 공지 개별 API | `/api/notices/[id]` | GET, PATCH, DELETE (수정/삭제는 super_admin) |
+
+### 9. 관리자 대시보드 (super_admin 전용)
 
 | 기능 | 경로 | 비고 |
 |------|------|------|
@@ -124,7 +137,7 @@
 | 이메일 알림 — 회원 승인/거절 | 관리자가 승인/거절 시 해당 사용자에게 이메일 발송 |
 | 이메일 알림 — 문의 답변 | 문의에 답글 등록 시 작성자에게 이메일 발송 |
 | 이메일 알림 — 보고서 승인/수정요청 | 상태 변경 시 보고서 작성자에게 이메일 발송 |
-| 공지사항 게시판 | 관리자 공지 작성 + 사용자 열람 |
+| ~~공지사항 게시판~~ | ✅ 2026-04-24 구현 완료 |
 | 알림 센터 | 앱 내 알림 목록 (승인, 답변, 보고서 상태 변경 등) |
 | 리포트 통계/분석 대시보드 | 기간별·기관별 성과지표 추이 차트 |
 | 사용자 회원 탈퇴 | 계정 삭제 및 개인정보 파기 |
@@ -177,7 +190,10 @@ eduops/
 │   │   │   │   ├── page.tsx        캘린더 메인 (서버 컴포넌트)
 │   │   │   │   ├── CalendarView.tsx 캘린더 클라이언트 컴포넌트 (월간/주간)
 │   │   │   │   ├── EventModal.tsx  일정 추가/수정 모달
-│   │   │   │   └── ImportModal.tsx 문서 업로드 일정 추출 모달
+│   │   │   │   └── EventModal.tsx  일정 추가/수정 모달
+│   │   │   ├── notices/
+│   │   │   │   └── page.tsx        공지사항 목록/상세 모달
+│   │   │   ├── HomeClient.tsx      홈 주간 캘린더 클라이언트 컴포넌트
 │   │   │   ├── mypage/
 │   │   │   │   └── page.tsx        마이페이지
 │   │   │   └── admin/
@@ -186,7 +202,8 @@ eduops/
 │   │   │       ├── users/page.tsx  사용자 관리
 │   │   │       ├── inquiries/page.tsx  문의 관리
 │   │   │       ├── reports/page.tsx    보고서 관리
-│   │   │       └── documents/page.tsx  규정 문서 관리
+│   │   │       ├── documents/page.tsx  규정 문서 관리
+│   │   │       └── notices/page.tsx    공지사항 관리
 │   │   ├── auth/
 │   │   │   ├── login/page.tsx
 │   │   │   ├── signup/page.tsx
@@ -220,9 +237,12 @@ eduops/
 │   │       │   ├── route.ts                    AI 질의응답 (RAG + SSE 스트리밍)
 │   │       │   └── history/route.ts            채팅 기록 조회
 │   │       ├── events/
-│   │       │   ├── route.ts                    일정 목록/생성 (GET/POST)
-│   │       │   ├── [id]/route.ts               일정 수정/삭제 (PATCH/DELETE)
-│   │       │   └── import/route.ts             문서 AI 일정 추출 (POST)
+│   │       │   ├── route.ts                    일정 목록/생성 (GET/POST) — start/end 날짜 범위 지원 추가
+│   │       │   └── [id]/route.ts               일정 수정/삭제 (PATCH/DELETE)
+│   │       ├── notices/
+│   │       │   ├── route.ts                    공지 최신 5건/생성 (GET/POST)
+│   │       │   ├── all/route.ts                공지 전체 목록 페이지네이션 (GET)
+│   │       │   └── [id]/route.ts               공지 상세/수정/삭제 (GET/PATCH/DELETE)
 │   │       ├── upload/route.ts                 파일 업로드 (attachments 버킷)
 │   │       ├── attachments/[id]/route.ts        첨부파일 다운로드
 │   │       └── admin/
@@ -257,7 +277,8 @@ eduops/
 │       └── dom-polyfills.ts
 ├── supabase/
 │   └── migrations/
-│       └── 20260422_create_events.sql          events 테이블 + RLS + calendar-imports 버킷
+│       ├── 20260422_create_events.sql          events 테이블 + RLS + calendar-imports 버킷
+│       └── 20260424_create_notices.sql         notices 테이블 + RLS
 ├── CLAUDE.md
 ├── IMPLEMENTED.md                              (이 파일)
 ├── next.config.ts
@@ -297,6 +318,7 @@ eduops/
 | `document_chunks` | `id`, `document_id`, `content`, `embedding` (vector 1536), `chunk_index`, `page_number` | PDF 청크 + pgvector 임베딩 |
 | `chat_histories` | `id`, `user_id`, `role` (`user`\|`assistant`), `content`, `sources` (jsonb) | AI 질의응답 대화 기록 |
 | `events` | `id`, `user_id`, `organization`, `agency_type`, `title`, `description`, `start_at`, `end_at`, `is_allday` (bool), `color` (`blue`\|`green`\|`red`\|`orange`\|`purple`\|`gray`), `source` (`manual`\|`document`\|`report`), `source_id`, `is_public` (bool) | 캘린더 일정 |
+| `notices` | `id`, `admin_id` (uuid), `title`, `content`, `is_pinned` (bool), `is_active` (bool), `created_at`, `updated_at` | 공지사항 |
 
 ### Supabase Storage 버킷
 
