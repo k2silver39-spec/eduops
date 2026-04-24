@@ -22,6 +22,30 @@ interface Props {
   onClose: () => void
 }
 
+// ── Display helpers (robust against invalid ISO strings) ─────────────────────
+
+function formatDateDisplay(ev: ImportedEvent): string {
+  if (ev.date_label) return ev.date_label
+  if (ev.start_at) {
+    const parts = ev.start_at.split('T')[0]?.split('-') ?? []
+    const month = parseInt(parts[1] ?? '', 10)
+    const day   = parseInt(parts[2] ?? '', 10)
+    if (!isNaN(month) && !isNaN(day)) return `${month}/${day}`
+  }
+  return '날짜 미정'
+}
+
+function formatTimeDisplay(ev: ImportedEvent): string {
+  if (ev.is_allday) return '종일'
+  if (ev.duration_hours) return `${ev.duration_hours}시간`
+  if (ev.start_at && ev.end_at) {
+    const s = ev.start_at.split('T')[1]?.slice(0, 5) ?? ''
+    const e = ev.end_at.split('T')[1]?.slice(0, 5) ?? ''
+    if (s && e) return `${s}~${e}`
+  }
+  return '-'
+}
+
 export default function ImportModal({ onImport, onClose }: Props) {
   const [file,     setFile]     = useState<File | null>(null)
   const [year,     setYear]     = useState(String(new Date().getFullYear()))
@@ -253,10 +277,10 @@ export default function ImportModal({ onImport, onClose }: Props) {
                               </td>
                               <td className="px-2 py-2 text-gray-800 font-medium max-w-[180px] truncate">{ev.title}</td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
-                                {ev.date_label || '-'}
+                                {formatDateDisplay(ev)}
                               </td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
-                                {ev.duration_hours ? `${ev.duration_hours}시간` : '-'}
+                                {formatTimeDisplay(ev)}
                               </td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
                                 {ev.participants || '-'}

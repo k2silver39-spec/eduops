@@ -181,6 +181,7 @@ async function extractScheduleTables(buffer: Buffer, baseYear: number): Promise<
     }
 
     if (sessions.length > 0) {
+      console.log(`=== 페이지 ${p} 파싱된 세션 데이터:`, JSON.stringify(sessions, null, 2))
       tables.push({ pageNum: p, contextText: ctxText, header, sessions })
     }
   }
@@ -200,10 +201,18 @@ async function mapCourseNames(tables: ScheduleTable[]): Promise<string[]> {
   }))
 
   const prompt = `아래는 PDF에서 추출한 교육일정 테이블 목록입니다.
-각 테이블이 어떤 교육과정에 해당하는지 과정명을 찾아주세요.
-과정명은 context_text(테이블 바로 위 텍스트)에서 추출하세요.
-대괄호([])가 있으면 포함해서 추출하세요.
-예: '[고급 4단계] 실습과정', '[기초 1단계] 세미나과정'
+각 테이블이 어떤 교육과정에 해당하는지 context_text(테이블 바로 위 텍스트)에서 과정명을 찾아주세요.
+
+과정명 추출 규칙 (우선순위 순):
+1. 대괄호([])가 포함된 텍스트를 우선 선택. 예: '[고급 4단계] 실습과정', '[기초 1단계] 세미나과정'
+2. 없으면 '과정', '교육', '단계', '훈련', '양성' 키워드가 포함된 문장 선택
+3. 그래도 없으면 context_text에서 첫 번째 비어있지 않은 줄 사용
+
+반드시 지켜야 할 규칙:
+- 과정명은 최소 5글자 이상이어야 함
+- '입문', '이론', '심화', '성과확산', '실습' 같이 단어 하나만 단독으로 있으면 과정명이 아님
+  → 이 경우 앞뒤 문맥과 합쳐서 완전한 과정명을 만들 것
+- 단어 하나만 추출했다면 반드시 다시 확인할 것
 
 ${JSON.stringify(tableList, null, 2)}
 
@@ -242,6 +251,20 @@ ${JSON.stringify(tableList, null, 2)}
     const found = mapping.find(m => m.table_index === i)
     return found?.course_name ?? `과정 ${i + 1}`
   })
+}
+
+// ── Validation + logging ──────────────────────────────────────────────────────
+
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+
+function validateAndLog(events: ExtractedEvent[], source: string): ExtractedEvent[] {
+  const valid = events.filter(item => {
+    const ok = !!item.start_at && ISO_RE.test(item.start_at)
+    if (!ok) console.log(`[${source}] 유효하지 않은 날짜 데이터 제외:`, JSON.stringify(item))
+    return ok
+  })
+  console.log(`=== [${source}] 최종 결과 (${valid.length}개):`, JSON.stringify(valid, null, 2))
+  return valid
 }
 
 // ── Fallback: full-text → GPT (DOCX or PDF with no detected tables) ──────────
@@ -382,18 +405,22 @@ export async function POST(request: Request) {
       let tables: ScheduleTable[] = []
       try {
         tables = await extractScheduleTables(buffer, refYear)
-      } catch { /* fall through to full-text GPT */ }
+      } catch (e) {
+        console.log('=== pdfjs-dist 테이블 추출 실패, pdf-parse fallback 사용:', e)
+      }
+      console.log('=== 추출된 테이블 수:', tables.length)
 
       if (tables.length > 0) {
         // Step 4: GPT maps course names only
         const courseNames = await mapCourseNames(tables)
+        console.log('=== GPT 과정명 매핑 결과:', courseNames)
 
         // Step 5: assemble final events
-        const events: ExtractedEvent[] = []
+        const raw: ExtractedEvent[] = []
         for (let i = 0; i < tables.length; i++) {
           const courseName = courseNames[i]
           for (const sess of tables[i].sessions) {
-            events.push({
+            raw.push({
               course_name:    courseName,
               session:        sess.session,
               title:          `${courseName} - ${sess.session}`,
@@ -408,6 +435,7 @@ export async function POST(request: Request) {
           }
         }
 
+        const events = validateAndLog(raw, 'pdfjs-table')
         if (events.length > 0) return NextResponse.json({ events })
       }
 
@@ -429,8 +457,8 @@ export async function POST(request: Request) {
         )
       }
 
-      const events = await extractViaGpt(text, String(refYear))
-      return NextResponse.json({ events })
+      const gptEvents = validateAndLog(await extractViaGpt(text, String(refYear)), 'pdf-gpt-fallback')
+      return NextResponse.json({ events: gptEvents })
     }
 
     // ── DOCX: full text via GPT ───────────────────────────────────────────────
@@ -441,8 +469,8 @@ export async function POST(request: Request) {
         { status: 422 }
       )
     }
-    const events = await extractViaGpt(text, String(refYear))
-    return NextResponse.json({ events })
+    const docxEvents = validateAndLog(await extractViaGpt(text, String(refYear)), 'docx-gpt')
+    return NextResponse.json({ events: docxEvents })
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '처리 중 오류가 발생했습니다.'
