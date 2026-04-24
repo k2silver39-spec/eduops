@@ -165,7 +165,6 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
         body: JSON.stringify(e),
       })
     ))
-    setShowImport(false)
     fetchEvents()
   }
 
