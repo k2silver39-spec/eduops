@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import EventModal, { CalendarEvent } from './EventModal'
-import ImportModal from './ImportModal'
 
 const COLOR_BG: Record<string, string> = {
   blue:   'bg-blue-500',
@@ -72,7 +71,6 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
   const [orgFilter,  setOrgFilter]  = useState('all')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [modalEvent,   setModalEvent]   = useState<CalendarEvent | null | undefined>(undefined)
-  const [showImport,   setShowImport]   = useState(false)
 
   const isAdmin     = profile.role === 'super_admin'
   const canPublish  = profile.agency_type === '주관기관' || isAdmin
@@ -154,17 +152,6 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
     const res = await fetch(`/api/events?group_id=${modalEvent.repeat_group_id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error()
     setModalEvent(undefined)
-    fetchEvents()
-  }
-
-  const importEvents = async (evts: Partial<CalendarEvent>[]) => {
-    await Promise.all(evts.map(e =>
-      fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(e),
-      })
-    ))
     fetchEvents()
   }
 
@@ -268,15 +255,6 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
             </div>
           )}
           <div className="flex-1" />
-          <button
-            onClick={() => setShowImport(true)}
-            className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            문서 가져오기
-          </button>
           <button
             onClick={() => { setSelectedDate(null); setModalEvent(null) }}
             className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
@@ -532,13 +510,6 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
         />
       )}
 
-      {/* 문서 가져오기 모달 */}
-      {showImport && (
-        <ImportModal
-          onImport={importEvents}
-          onClose={() => setShowImport(false)}
-        />
-      )}
     </div>
   )
 }
