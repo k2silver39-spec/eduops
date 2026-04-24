@@ -7,6 +7,8 @@ interface ImportedEvent {
   course_name: string
   session: string
   title: string
+  date_label: string
+  day_of_week: string
   start_at: string
   end_at: string
   duration_hours: number
@@ -19,17 +21,6 @@ interface ImportedEvent {
 interface Props {
   onImport: (events: Partial<CalendarEvent>[]) => Promise<void>
   onClose: () => void
-}
-
-const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토']
-
-function fmtDate(iso: string): string {
-  try {
-    const d = new Date(iso)
-    return `${d.getMonth() + 1}/${d.getDate()}(${DAYS_KO[d.getDay()]})`
-  } catch {
-    return iso
-  }
 }
 
 export default function ImportModal({ onImport, onClose }: Props) {
@@ -113,7 +104,7 @@ export default function ImportModal({ onImport, onClose }: Props) {
     setError('')
     try {
       await onImport(
-        selected.map(({ selected: _s, course_name: _c, session: _se, duration_hours: _d, participants: _p, ...rest }) => ({
+        selected.map(({ selected: _s, course_name: _c, session: _se, date_label: _dl, day_of_week: _dw, duration_hours: _d, participants: _p, ...rest }) => ({
           ...rest,
           color:  'blue'     as const,
           source: 'document' as const,
@@ -264,10 +255,10 @@ export default function ImportModal({ onImport, onClose }: Props) {
                               </td>
                               <td className="px-2 py-2 text-gray-800 font-medium max-w-[180px] truncate">{ev.title}</td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
-                                {fmtDate(ev.start_at)}
+                                {ev.date_label || '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
-                                {ev.duration_hours ? `${ev.duration_hours}h` : '-'}
+                                {ev.duration_hours ? `${ev.duration_hours}시간` : '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-gray-600 whitespace-nowrap">
                                 {ev.participants || '-'}
