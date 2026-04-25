@@ -22,17 +22,12 @@ export default function MyPage() {
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return router.push('/auth/login')
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('email, organization')
-        .eq('id', user.id)
-        .single()
-
-      if (data) setProfile(data)
+      const res = await fetch('/api/profile')
+      if (res.status === 401) return router.push('/auth/login')
+      if (res.ok) {
+        const data = await res.json()
+        setProfile(data)
+      }
       setLoading(false)
     }
     load()
