@@ -14,7 +14,7 @@ export async function PATCH(
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('agency_type, role')
+    .select('role')
     .eq('id', user.id)
     .single()
 
@@ -41,7 +41,7 @@ export async function PATCH(
   if (body.is_allday !== undefined)   updates.is_allday   = body.is_allday
   if (body.color !== undefined)       updates.color       = body.color
   if (body.is_public !== undefined) {
-    const canPublish = profile?.agency_type === '주관기관' || profile?.role === 'super_admin'
+    const canPublish = profile?.role === 'super_admin'
     updates.is_public = canPublish ? body.is_public : false
   }
 

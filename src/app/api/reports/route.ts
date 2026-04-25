@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization, agency_type, status')
+    .select('organization, status')
     .eq('id', user.id)
     .single()
 
@@ -121,7 +121,6 @@ export async function POST(request: Request) {
   // 주간보고 최초 제출 시 캘린더 일정 생성
   if (status === 'submitted' && type === 'weekly') {
     const refYear = parseInt(period_start.split('-')[0])
-    const agencyType = (profile as { agency_type?: string }).agency_type ?? ''
     const LABELS = ['직무교육', '대외협력 및 홍보', '기타']
     const activityRows = (content as { activity_rows?: { current_week: string; next_week: string }[] }).activity_rows ?? []
     const datedEvents: { date: string; title: string }[] = []
@@ -178,7 +177,6 @@ export async function POST(request: Request) {
         datedEvents.map(ev => ({
           user_id:      user.id,
           organization: profile.organization,
-          agency_type:  agencyType,
           title:        ev.title,
           description:  '',
           start_at:     `${ev.date}T00:00:00.000Z`,

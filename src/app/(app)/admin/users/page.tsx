@@ -7,16 +7,9 @@ interface User {
   id: string
   email: string
   organization: string
-  agency_type: string
   role: string
   status: string
   created_at: string
-}
-
-const AGENCY_TYPE_BADGE: Record<string, string> = {
-  '주관기관': 'bg-purple-100 text-purple-700',
-  '운영기관': 'bg-blue-100 text-blue-700',
-  '협력기관': 'bg-green-100 text-green-700',
 }
 
 type Tab = 'pending' | 'all'
@@ -136,7 +129,6 @@ export default function AdminUsersPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">이메일</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">소속 기관</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">기관구분</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">가입일</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">상태</th>
                 {tab === 'all' && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">역할</th>}
@@ -145,18 +137,13 @@ export default function AdminUsersPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={tab === 'all' ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400">불러오는 중...</td></tr>
+                <tr><td colSpan={tab === 'all' ? 6 : 5} className="px-4 py-10 text-center text-sm text-gray-400">불러오는 중...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={tab === 'all' ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400">사용자가 없습니다.</td></tr>
+                <tr><td colSpan={tab === 'all' ? 6 : 5} className="px-4 py-10 text-center text-sm text-gray-400">사용자가 없습니다.</td></tr>
               ) : filtered.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{user.organization}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${AGENCY_TYPE_BADGE[user.agency_type] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {user.agency_type || '—'}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(user.created_at)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[user.status] ?? 'bg-gray-100 text-gray-600'}`}>

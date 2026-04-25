@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization, agency_type, role')
+    .select('organization, role')
     .eq('id', user.id)
     .single()
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
@@ -49,7 +49,6 @@ export async function GET(request: Request) {
         .lte('start_at', to.toISOString()),
       admin.from('events')
         .select('*')
-        .eq('agency_type', '주관기관')
         .eq('is_public', true)
         .gte('start_at', from.toISOString())
         .lte('start_at', to.toISOString()),
@@ -123,7 +122,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization, agency_type, status')
+    .select('organization, role, status')
     .eq('id', user.id)
     .single()
   if (!profile || profile.status !== 'approved') {
@@ -137,15 +136,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  // 주관기관이 아닌 사용자는 is_public 설정 불가
-  const canPublish = profile.agency_type === '주관기관'
+  const canPublish = profile.role === 'super_admin'
 
   const { data, error } = await admin
     .from('events')
     .insert({
       user_id:      user.id,
       organization: profile.organization,
-      agency_type:  profile.agency_type,
       title:        title.trim(),
       description:  description?.trim() ?? '',
       start_at,

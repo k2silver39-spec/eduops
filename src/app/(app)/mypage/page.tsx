@@ -7,23 +7,12 @@ import { createClient } from '@/lib/supabase/client'
 interface Profile {
   email: string
   organization: string
-  agency_type: string
 }
 
 export default function MyPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Organization edit
-  const [editOrg, setEditOrg] = useState('')
-  const [orgLoading, setOrgLoading] = useState(false)
-  const [orgMsg, setOrgMsg] = useState('')
-
-  // Agency type edit
-  const [editAgencyType, setEditAgencyType] = useState('')
-  const [agencyTypeLoading, setAgencyTypeLoading] = useState(false)
-  const [agencyTypeMsg, setAgencyTypeMsg] = useState('')
 
   // Password change
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
@@ -39,60 +28,15 @@ export default function MyPage() {
 
       const { data } = await supabase
         .from('profiles')
-        .select('email, organization, agency_type')
+        .select('email, organization')
         .eq('id', user.id)
         .single()
 
-      if (data) {
-        setProfile(data)
-        setEditOrg(data.organization)
-        setEditAgencyType(data.agency_type ?? '운영기관')
-      }
+      if (data) setProfile(data)
       setLoading(false)
     }
     load()
   }, [router])
-
-  const handleOrgSave = async () => {
-    if (!editOrg.trim()) return
-    setOrgLoading(true)
-    setOrgMsg('')
-
-    const res = await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ organization: editOrg.trim() }),
-    })
-
-    if (!res.ok) {
-      setOrgMsg('저장에 실패했습니다.')
-    } else {
-      setProfile(prev => prev ? { ...prev, organization: editOrg.trim() } : prev)
-      setOrgMsg('저장되었습니다.')
-    }
-    setOrgLoading(false)
-    setTimeout(() => setOrgMsg(''), 2500)
-  }
-
-  const handleAgencyTypeSave = async () => {
-    setAgencyTypeLoading(true)
-    setAgencyTypeMsg('')
-
-    const res = await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agency_type: editAgencyType }),
-    })
-
-    if (!res.ok) {
-      setAgencyTypeMsg('저장에 실패했습니다.')
-    } else {
-      setProfile(prev => prev ? { ...prev, agency_type: editAgencyType } : prev)
-      setAgencyTypeMsg('저장되었습니다.')
-    }
-    setAgencyTypeLoading(false)
-    setTimeout(() => setAgencyTypeMsg(''), 2500)
-  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -155,50 +99,8 @@ export default function MyPage() {
             <p className="text-sm text-gray-700">{profile?.email}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400 mb-1">소속 기관</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={editOrg}
-                onChange={(e) => setEditOrg(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-              <button
-                onClick={handleOrgSave}
-                disabled={orgLoading || editOrg.trim() === profile?.organization}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
-              >
-                저장
-              </button>
-            </div>
-            {orgMsg && <p className="text-xs text-blue-600 mt-1.5">{orgMsg}</p>}
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">기관구분</p>
-            {profile?.agency_type === '주관기관' ? (
-              <p className="text-sm text-gray-700 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-                주관기관 <span className="text-xs text-gray-400">(관리자 계정)</span>
-              </p>
-            ) : (
-              <div className="flex gap-2">
-                <select
-                  value={editAgencyType}
-                  onChange={(e) => setEditAgencyType(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
-                >
-                  <option value="운영기관">운영기관</option>
-                  <option value="협력기관">협력기관</option>
-                </select>
-                <button
-                  onClick={handleAgencyTypeSave}
-                  disabled={agencyTypeLoading || editAgencyType === profile?.agency_type}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
-                >
-                  저장
-                </button>
-              </div>
-            )}
-            {agencyTypeMsg && <p className="text-xs text-blue-600 mt-1.5">{agencyTypeMsg}</p>}
+            <p className="text-xs text-gray-400 mb-0.5">소속 기관</p>
+            <p className="text-sm text-gray-700">{profile?.organization || '—'}</p>
           </div>
         </div>
       </section>

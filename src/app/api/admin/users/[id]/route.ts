@@ -23,8 +23,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body.status !== undefined) updates.status = body.status
   if (body.role !== undefined) {
     updates.role = body.role
-    // 관리자로 승격 시 기관구분 자동 변경
-    if (body.role === 'super_admin') updates.agency_type = '주관기관'
   }
 
   const { data, error } = await admin

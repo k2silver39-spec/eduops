@@ -96,7 +96,6 @@ export default function SignupPage() {
     password: '',
     passwordConfirm: '',
     organization: '',
-    agency_type: '운영기관' as '운영기관' | '협력기관',
   })
   const [showPw, setShowPw]           = useState(false)
   const [showPwConfirm, setShowPwConfirm] = useState(false)
@@ -148,7 +147,6 @@ export default function SignupPage() {
         id: data.user.id,
         email: formData.email,
         organization: formData.organization,
-        agency_type: formData.agency_type,
         role: 'user',
         status: 'pending',
         privacy_agreed: true,
@@ -211,18 +209,6 @@ export default function SignupPage() {
                   {orgs.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
                 </select>
               )}
-            </div>
-
-            <div>
-              <label htmlFor="agency_type" className="block text-sm font-medium text-gray-700 mb-1">기관구분</label>
-              <select
-                id="agency_type" name="agency_type" required
-                value={formData.agency_type} onChange={handleChange}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
-              >
-                <option value="운영기관">운영기관</option>
-                <option value="협력기관">협력기관</option>
-              </select>
             </div>
 
             {/* 비밀번호 */}

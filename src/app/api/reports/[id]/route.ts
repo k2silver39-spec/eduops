@@ -9,7 +9,7 @@ async function getAuthContext(reportId: string) {
 
   const admin = createAdminClient()
   const [{ data: profile }, { data: report }] = await Promise.all([
-    admin.from('profiles').select('role, organization, agency_type').eq('id', user.id).single(),
+    admin.from('profiles').select('role, organization').eq('id', user.id).single(),
     admin.from('reports').select('*, author:profiles!user_id(id, email, organization)').eq('id', reportId).single(),
   ])
 
@@ -104,7 +104,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       content: { activity_rows?: { current_week: string; next_week: string }[] } | null
     }
     const refYear = parseInt(rep.period_start.split('-')[0])
-    const agencyType = (profile as { agency_type?: string } | null)?.agency_type ?? ''
 
     // 기존 이벤트 삭제 후 재생성 (재제출 시 내용 갱신 반영)
     await admin.from('events').delete().eq('source', 'report').eq('source_id', id)
@@ -212,7 +211,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         datedEvents.map(ev => ({
           user_id:      user.id,
           organization: profile?.organization ?? '',
-          agency_type:  agencyType,
           title:        ev.title,
           description:  '',
           start_at:     `${ev.date}T00:00:00.000Z`,

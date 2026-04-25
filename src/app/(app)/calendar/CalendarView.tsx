@@ -46,7 +46,6 @@ function fmtTime(iso: string) {
 interface Profile {
   id: string
   role: string
-  agency_type: string
   organization: string
 }
 
@@ -73,7 +72,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
   const [modalEvent,   setModalEvent]   = useState<CalendarEvent | null | undefined>(undefined)
 
   const isAdmin     = profile.role === 'super_admin'
-  const canPublish  = profile.agency_type === '주관기관' || isAdmin
+  const canPublish  = isAdmin
 
   const fetchEvents = useCallback(async () => {
     setLoading(true)
@@ -327,7 +326,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                         onClick={e => { e.stopPropagation(); setModalEvent(ev) }}
                         className={`w-full text-left rounded px-1 py-0.5 text-[10px] font-medium truncate flex items-center gap-1 ${COLOR_LIGHT[getOrgColor(ev.organization)]}`}
                       >
-                        {ev.agency_type === '주관기관' && ev.is_public && (
+                        {ev.is_public && (
                           <span className="flex-shrink-0">📌</span>
                         )}
                         {ev.source === 'report' && (
@@ -381,7 +380,7 @@ export default function CalendarView({ profile, organizations = [] }: Props) {
                           ) : (
                             <span className="text-xs text-gray-400">{fmtTime(ev.start_at)} ~ {fmtTime(ev.end_at)}</span>
                           )}
-                          {ev.agency_type === '주관기관' && ev.is_public && (
+                          {ev.is_public && (
                             <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">주관</span>
                           )}
                           {ev.source === 'report' && (

@@ -9,7 +9,7 @@ export default async function CalendarPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, role, agency_type, organization')
+    .select('id, role, organization')
     .eq('id', user!.id)
     .single()
 
@@ -38,7 +38,6 @@ export default async function CalendarPage() {
         profile={{
           id:           profile.id,
           role:         profile.role,
-          agency_type:  profile.agency_type ?? '',
           organization: profile.organization ?? '',
         }}
         organizations={organizations}

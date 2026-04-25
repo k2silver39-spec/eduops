@@ -15,7 +15,6 @@ export interface CalendarEvent {
   source_id?: string
   user_id?: string
   organization?: string
-  agency_type?: string
   repeat_group_id?: string
 }
 
