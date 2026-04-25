@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 const items = [
   { href: '/admin', label: '대시보드' },
   { href: '/admin/users', label: '사용자' },
+  { href: '/admin/organizations', label: '기관 관리' },
   { href: '/admin/inquiries', label: '문의' },
   { href: '/admin/reports', label: '리포트' },
   { href: '/admin/documents', label: '문서' },

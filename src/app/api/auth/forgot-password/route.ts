@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
 
     const { error: mailError } = await resend.emails.send({
-      from: `의료AI 직무교육사업 관리시스템 <${fromEmail}>`,
+      from: `의료AI 사업관리시스템 <${fromEmail}>`,
       to: email,
       subject: '[의료AI 관리시스템] 임시 비밀번호 안내',
       html: `

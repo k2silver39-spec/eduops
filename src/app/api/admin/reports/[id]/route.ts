@@ -20,7 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { data, error } = await admin
     .from('reports')
-    .select('id, type, period_label, content, organization, author:profiles!user_id(name)')
+    .select('id, type, period_label, content, organization, author:profiles!user_id(id, email, organization)')
     .eq('id', id)
     .single()
 
@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from('reports')
     .update(updates)
     .eq('id', id)
-    .select('*, author:profiles!user_id(name, agency_type)')
+    .select('*, author:profiles!user_id(id, email, organization)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

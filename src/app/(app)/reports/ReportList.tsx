@@ -16,7 +16,7 @@ interface Report {
   submitted_at: string | null
   created_at: string
   updated_at?: string
-  author?: { name: string } | null
+  author?: { email: string } | null
 }
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -121,7 +121,7 @@ export default function ReportList({
                     <StatusBadge status={report.status} />
                   </div>
                   <p className="mt-1 text-xs text-gray-400">
-                    {report.author?.name}
+                    {report.author?.email ?? '-'}
                     {report.submitted_at ? ` · ${formatDate(report.submitted_at)}` : ''}
                   </p>
                 </Link>

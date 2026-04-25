@@ -33,7 +33,7 @@ export default async function EditReportPage({
   const admin = createAdminClient()
   const [{ data: report }, { data: profile }, { data: attachments }] = await Promise.all([
     admin.from('reports').select('*').eq('id', id).single(),
-    admin.from('profiles').select('name, organization, agency_type').eq('id', user.id).single(),
+    admin.from('profiles').select('organization, agency_type').eq('id', user.id).single(),
     admin.from('attachments').select('id, filename, size').eq('entity_type', 'report').eq('entity_id', id),
   ])
 
@@ -69,7 +69,7 @@ export default async function EditReportPage({
       initialWeeklyContent={type === 'weekly' ? content as WeeklyContent : undefined}
       initialMonthlyContent={type === 'monthly' ? content as MonthlyContent : undefined}
       forceAllowSubmit={isResubmit}
-      userProfile={{ name: profile.name, organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
+      userProfile={{ organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
       initialAttachments={(attachments ?? []) as { id: string; filename: string; size: number }[]}
     />
   )

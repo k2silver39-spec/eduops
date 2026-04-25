@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const adminClient = createAdminClient()
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('name, organization, role, status')
+    .select('organization, role, status')
     .eq('id', user.id)
     .single()
 
@@ -22,7 +22,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.status === 'rejected') redirect('/auth/rejected')
 
   const userProfile = {
-    name: profile.name as string,
     organization: profile.organization as string,
     role: profile.role as string,
   }

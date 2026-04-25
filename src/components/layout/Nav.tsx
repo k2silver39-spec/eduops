@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Profile {
-  name: string
   organization: string
   role: string
 }
@@ -111,7 +110,7 @@ export default function Nav({ profile }: { profile: Profile | null }) {
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 flex-col bg-white border-r border-gray-200 z-30">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100">
-          <span className="text-sm font-bold text-gray-900 leading-tight block">의료AI<br />직무교육사업<br />관리시스템</span>
+          <span className="text-sm font-bold text-gray-900 leading-tight block">의료AI<br />사업관리시스템</span>
         </div>
 
         {/* Menu */}
@@ -138,8 +137,7 @@ export default function Nav({ profile }: { profile: Profile | null }) {
         {/* User + Logout */}
         <div className="px-3 py-4 border-t border-gray-100">
           <div className="px-3 mb-3">
-            <p className="text-xs font-medium text-gray-900 truncate">{profile?.name}</p>
-            <p className="text-xs text-gray-400 truncate">{profile?.organization}</p>
+            <p className="text-xs font-medium text-gray-900 truncate">{profile?.organization}</p>
           </div>
           <button
             onClick={handleLogout}

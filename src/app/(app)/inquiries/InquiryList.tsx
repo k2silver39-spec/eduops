@@ -11,19 +11,13 @@ interface Inquiry {
   status: string
   organization: string
   created_at: string
-  author: { name: string } | null
+  author: { email: string; organization: string } | null
 }
 
 type StatusFilter = 'all' | 'open' | 'closed'
 type CategoryFilter = 'all' | '교육' | '사업' | '예산' | '기타'
 
 const PAGE_SIZE = 20
-
-function maskName(name: string | null | undefined): string {
-  if (!name) return '알 수 없음'
-  if (name.length <= 1) return name
-  return name[0] + '*'.repeat(name.length - 1)
-}
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr)
@@ -196,7 +190,7 @@ export default function InquiryList() {
               </div>
               <p className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">{inquiry.title}</p>
               <p className="mt-1 text-xs text-gray-400">
-                {maskName(inquiry.author?.name)} · {formatDate(inquiry.created_at)}
+                {inquiry.author?.organization ?? '—'} · {formatDate(inquiry.created_at)}
               </p>
             </Link>
           ))

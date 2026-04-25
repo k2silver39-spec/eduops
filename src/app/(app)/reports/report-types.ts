@@ -116,13 +116,13 @@ export function calcBudgetSubtotal(a: BudgetEntry, b: BudgetEntry) {
 }
 
 /** 기본 WeeklyContent 생성 */
-export function defaultWeekly(org: string, name: string, agencyType?: string): WeeklyContent {
+export function defaultWeekly(org: string, agencyType?: string): WeeklyContent {
   return {
     version: 2,
     org_info: {
       agency_type: agencyType,
       operator: org,
-      operator_name: name,
+      operator_name: '',
       operator_position: '실무담당자',
     },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
@@ -131,14 +131,14 @@ export function defaultWeekly(org: string, name: string, agencyType?: string): W
 }
 
 /** 기본 MonthlyContent 생성 */
-export function defaultMonthly(org: string, name: string, agencyType?: string): MonthlyContent {
+export function defaultMonthly(org: string, agencyType?: string): MonthlyContent {
   const emptyBudget: BudgetEntry = { budget: '', executed: '' }
   return {
     version: 2,
     org_info: {
       agency_type: agencyType,
       operator: org,
-      operator_name: name,
+      operator_name: '',
       operator_position: '사업책임자',
     },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),

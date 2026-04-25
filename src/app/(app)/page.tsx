@@ -85,7 +85,7 @@ export default async function HomePage() {
   const adminClient = createAdminClient()
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('name, organization, role')
+    .select('organization, role')
     .eq('id', user!.id)
     .single()
 
@@ -97,9 +97,8 @@ export default async function HomePage() {
       {/* Welcome */}
       <div>
         <h1 className="text-lg font-semibold text-gray-900">
-          안녕하세요, {profile?.name}님
+          안녕하세요, {profile?.organization}님
         </h1>
-        <p className="text-sm text-gray-500 mt-0.5">{profile?.organization}</p>
       </div>
 
       {/* Today Events */}

@@ -10,7 +10,7 @@ async function getAuthContext(reportId: string) {
   const admin = createAdminClient()
   const [{ data: profile }, { data: report }] = await Promise.all([
     admin.from('profiles').select('role, organization, agency_type').eq('id', user.id).single(),
-    admin.from('reports').select('*, author:profiles!user_id(name)').eq('id', reportId).single(),
+    admin.from('reports').select('*, author:profiles!user_id(id, email, organization)').eq('id', reportId).single(),
   ])
 
   return { user, profile, report, admin }
@@ -92,7 +92,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from('reports')
     .update(updates)
     .eq('id', id)
-    .select('*, author:profiles!user_id(name)')
+    .select('*, author:profiles!user_id(id, email, organization)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
   let query = admin
     .from('inquiries')
-    .select('id, title, category, is_public, status, organization, created_at, author:profiles!user_id(name)', { count: 'exact' })
+    .select('id, title, category, is_public, status, organization, created_at, author:profiles!user_id(id, email, organization)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1)
 

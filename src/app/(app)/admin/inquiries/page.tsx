@@ -11,7 +11,7 @@ interface Inquiry {
   status: string
   organization: string
   created_at: string
-  author: { name: string } | null
+  author: { email: string; organization: string } | null
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -163,7 +163,7 @@ export default function AdminInquiriesPage() {
                       {q.title}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{(q.author as { name: string } | null)?.name ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{q.author?.email ?? '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${CAT_COLORS[q.category] ?? 'bg-gray-100 text-gray-600'}`}>
                       {q.category}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -50,13 +50,13 @@ function PrivacyModal({ onAgree, onClose }: { onAgree: () => void; onClose: () =
 
         <div className="px-6 py-5 overflow-y-auto flex-1 text-sm text-gray-700 leading-relaxed space-y-4">
           <p>
-            한국보건복지인재원은 의료AI 직무교육사업 관리시스템 이용 및 서비스 제공을 위하여 아래와 같이
+            한국보건복지인재원은 의료AI 사업관리시스템 이용 및 서비스 제공을 위하여 아래와 같이
             개인정보를 수집·이용하고자 합니다. 내용을 자세히 읽으신 후 동의 여부를 결정하여 주십시오.
           </p>
           <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 space-y-2">
             <p className="font-semibold text-gray-800">○ 개인정보의 수집·이용에 관한 사항</p>
             <ul className="space-y-1 pl-2 text-gray-700">
-              <li>- 수집항목: 이메일, 성명, 기관명</li>
+              <li>- 수집항목: 이메일, 기관명</li>
               <li>- 수집목적: 회원가입 및 관리, 사업관리서비스 제공</li>
               <li>- 보유기간: 회원탈퇴시까지</li>
             </ul>
@@ -92,7 +92,6 @@ function checkPassword(pw: string) {
 export default function SignupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: '',
     passwordConfirm: '',
@@ -105,6 +104,16 @@ export default function SignupPage() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [error, setError]   = useState('')
   const [loading, setLoading] = useState(false)
+  const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([])
+  const [orgLoading, setOrgLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/organizations')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { id: string; name: string }[]) => setOrgs(Array.isArray(data) ? data : []))
+      .catch(() => setOrgs([]))
+      .finally(() => setOrgLoading(false))
+  }, [])
 
   const pwCheck = useMemo(() => checkPassword(formData.password), [formData.password])
   const pwAllOk = Object.values(pwCheck).every(Boolean)
@@ -138,7 +147,6 @@ export default function SignupPage() {
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         email: formData.email,
-        name: formData.name,
         organization: formData.organization,
         agency_type: formData.agency_type,
         role: 'user',
@@ -165,20 +173,10 @@ export default function SignupPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-gray-900">회원가입</h1>
-            <p className="mt-2 text-sm text-gray-500">의료AI 직무교육사업 관리시스템</p>
+            <p className="mt-2 text-sm text-gray-500">의료AI 사업관리시스템</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-              <input
-                id="name" name="name" type="text" required
-                value={formData.name} onChange={handleChange}
-                placeholder="홍길동"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
               <input
@@ -191,12 +189,28 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="organization" className="block text-sm font-medium text-gray-700 mb-1">소속 기관명</label>
-              <input
-                id="organization" name="organization" type="text" required
-                value={formData.organization} onChange={handleChange}
-                placeholder="OO대학교 / OO기업"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
+              {orgLoading ? (
+                <div className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-400 bg-gray-50 flex items-center gap-2">
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  기관 목록 불러오는 중...
+                </div>
+              ) : orgs.length === 0 ? (
+                <div className="w-full px-3 py-2.5 border border-amber-200 rounded-lg text-sm text-amber-700 bg-amber-50">
+                  등록된 기관이 없습니다. 관리자에게 문의하세요.
+                </div>
+              ) : (
+                <select
+                  id="organization" name="organization" required
+                  value={formData.organization} onChange={handleChange}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+                >
+                  <option value="">기관을 선택하세요</option>
+                  {orgs.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+                </select>
+              )}
             </div>
 
             <div>

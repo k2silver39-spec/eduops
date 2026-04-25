@@ -1,4 +1,4 @@
-# 의료AI 직무교육사업 관리시스템 (eduops)
+# 의료AI 사업관리시스템 (eduops)
 
 교육기관 내부 구성원을 위한 업무 통합 관리 플랫폼입니다.  
 관리자 승인 기반 회원 관리, 주간·월간 업무보고, 문의 게시판, AI 규정 질의응답 기능을 제공합니다.
@@ -114,7 +114,6 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE profiles (
   id              uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email           text NOT NULL,
-  name            text NOT NULL,
   organization    text NOT NULL DEFAULT '',
   agency_type     text CHECK (agency_type IN ('운영기관', '협력기관', '주관기관')),
   role            text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'super_admin')),

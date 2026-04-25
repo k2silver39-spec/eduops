@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   let query = admin
     .from('reports')
-    .select('id, type, period_label, period_start, period_end, status, revision_reason, submitted_at, created_at, organization, author:profiles!user_id(name, id)')
+    .select('id, type, period_label, period_start, period_end, status, revision_reason, submitted_at, created_at, organization, author:profiles!user_id(id, email, organization)')
     .order('created_at', { ascending: false })
 
   if (status !== 'all')       query = query.eq('status', status)

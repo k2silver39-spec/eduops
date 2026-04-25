@@ -12,7 +12,7 @@ export default async function NewReportPage() {
   const [{ data: profile }, { data: existingReports }] = await Promise.all([
     admin
       .from('profiles')
-      .select('name, organization, agency_type, status')
+      .select('organization, agency_type, status')
       .eq('id', user.id)
       .single(),
     admin
@@ -26,7 +26,7 @@ export default async function NewReportPage() {
   return (
     <ReportForm
       mode="create"
-      userProfile={{ name: profile.name, organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
+      userProfile={{ organization: profile.organization, agency_type: profile.agency_type ?? undefined }}
       existingReports={(existingReports ?? []) as { id: string; type: string; period_start: string }[]}
     />
   )

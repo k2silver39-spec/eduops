@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   const { data } = await admin
     .from('reports')
-    .select('id, period_label, period_start, status, content, author:profiles!user_id(name)')
+    .select('id, period_label, period_start, status, content, author:profiles!user_id(id, email, organization)')
     .eq('organization', profile.organization)
     .eq('type', 'weekly')
     .gte('period_start', monthStart)

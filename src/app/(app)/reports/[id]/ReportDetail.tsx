@@ -51,7 +51,7 @@ interface Report {
   approved_at: string | null
   created_at: string
   updated_at: string
-  author: { name: string } | null
+  author: { email: string; organization: string } | null
 }
 
 interface Attachment {
@@ -337,7 +337,7 @@ interface OrgWeekly {
   period_label: string
   status: string
   content: WeeklyContent
-  author: { name: string } | null
+  author: { email: string; organization: string } | null
 }
 
 function OrgWeeklySection({ periodStart }: { periodStart: string }) {
@@ -385,8 +385,8 @@ function OrgWeeklySection({ periodStart }: { periodStart: string }) {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-sm font-medium text-gray-800 truncate">{r.period_label}</span>
-                    {r.author?.name && (
-                      <span className="text-xs text-gray-400 flex-shrink-0">{r.author.name}</span>
+                    {(r.author?.email || r.author?.organization) && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">{r.author?.email ?? r.author?.organization ?? '-'}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -590,7 +590,7 @@ export default function ReportDetail({
               <p className="text-base font-semibold text-gray-900">{report.period_label}</p>
             </div>
             <p className="text-xs text-gray-400">
-              {report.author?.name}
+              {report.author?.email ?? report.author?.organization ?? '-'}
               {report.submitted_at ? ` · 제출: ${formatDate(report.submitted_at)}` : ''}
             </p>
           </div>

@@ -24,7 +24,7 @@ export async function GET() {
       .order('period_start', { ascending: false }),
     admin
       .from('reports')
-      .select('id, type, period_label, period_start, period_end, status, submitted_at, created_at, author:profiles!user_id(name)')
+      .select('id, type, period_label, period_start, period_end, status, submitted_at, created_at, author:profiles!user_id(id, email, organization)')
       .eq('organization', profile.organization)
       .neq('user_id', user.id)
       .order('period_start', { ascending: false }),

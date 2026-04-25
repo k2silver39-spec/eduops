@@ -10,7 +10,6 @@ export interface ReportDownloadData {
   period_label: string
   content: WeeklyContent | MonthlyContent
   organization: string
-  author_name: string
 }
 
 // ─────────────────────────────────────────────────
@@ -29,7 +28,7 @@ export function downloadReportExcel(report: ReportDownloadData) {
   XLSX.utils.book_append_sheet(wb, ws, report.type === 'weekly' ? '주간보고서' : '월간보고서')
 
   const safe = report.period_label.replace(/[/\\:*?"<>|]/g, '_')
-  XLSX.writeFile(wb, `${report.author_name}_${safe}.xlsx`)
+  XLSX.writeFile(wb, `${report.organization}_${safe}.xlsx`)
 }
 
 function buildWeeklyRows(report: ReportDownloadData): (string | number)[][] {
@@ -38,7 +37,7 @@ function buildWeeklyRows(report: ReportDownloadData): (string | number)[][] {
 
   rows.push(['주간 실적보고서'])
   rows.push([report.period_label])
-  rows.push(['기관명', report.organization, '', '작성자', report.author_name])
+  rows.push(['기관명', report.organization])
   rows.push([])
 
   rows.push(['1. 수행기관 정보'])
@@ -80,7 +79,7 @@ function buildMonthlyRows(report: ReportDownloadData): (string | number)[][] {
 
   rows.push(['월간 실적보고서'])
   rows.push([report.period_label])
-  rows.push(['기관명', report.organization, '', '작성자', report.author_name])
+  rows.push(['기관명', report.organization])
   rows.push([])
 
   rows.push(['1. 수행기관 정보'])
@@ -207,7 +206,7 @@ function buildWeeklyHtml(report: ReportDownloadData): string {
   const body = `
     <h1>주간 실적보고서</h1>
     <p class="subtitle">${esc(report.period_label)}</p>
-    <p class="meta">기관명: ${esc(report.organization)} &nbsp;|&nbsp; 작성자: ${esc(report.author_name)}</p>
+    <p class="meta">기관명: ${esc(report.organization)}</p>
 
     <h2>1. 수행기관 정보</h2>
     <table><tbody>${orgRows}</tbody></table>
@@ -257,7 +256,7 @@ function buildMonthlyHtml(report: ReportDownloadData): string {
   const body = `
     <h1>월간 실적보고서</h1>
     <p class="subtitle">${esc(report.period_label)}</p>
-    <p class="meta">기관명: ${esc(report.organization)} &nbsp;|&nbsp; 작성자: ${esc(report.author_name)}</p>
+    <p class="meta">기관명: ${esc(report.organization)}</p>
 
     <h2>1. 수행기관 정보</h2>
     <table><tbody>${orgRows}</tbody></table>

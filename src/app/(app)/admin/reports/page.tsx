@@ -17,7 +17,7 @@ interface Report {
   submitted_at: string | null
   created_at: string
   organization: string
-  author: { name: string; id: string } | null
+  author: { id: string; email: string; organization: string } | null
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -45,7 +45,7 @@ function formatDate(d: string | null) {
 
 interface SummaryResult {
   overall: string
-  individuals: Array<{ name: string; organization: string; completed: string; issues: string }>
+  individuals: Array<{ organization: string; completed: string; issues: string }>
 }
 
 export default function AdminReportsPage() {
@@ -63,7 +63,7 @@ export default function AdminReportsPage() {
   // 승인 대기 탭 상태
   const [pending, setPending] = useState<Report[]>([])
   const [pendLoading, setPendLoading] = useState(false)
-  const [confirm, setConfirm] = useState<{ id: string; action: 'approve'; name: string } | null>(null)
+  const [confirm, setConfirm] = useState<{ id: string; action: 'approve'; email: string } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
   // 다운로드 상태
@@ -102,7 +102,6 @@ export default function AdminReportsPage() {
         period_label: data.period_label,
         content: data.content,
         organization: data.organization,
-        author_name: (data.author as { name: string } | null)?.name ?? '—',
       }
     } finally {
       setDownloadingId(null)
@@ -250,7 +249,7 @@ export default function AdminReportsPage() {
                   ) : reports.map((r) => (
                     <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.organization}</td>
-                      <td className="px-4 py-3 text-gray-900 whitespace-nowrap">{(r.author as { name: string } | null)?.name ?? '-'}</td>
+                      <td className="px-4 py-3 text-gray-900 whitespace-nowrap">{r.author?.email ?? '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${r.type === 'weekly' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                           {r.type === 'weekly' ? '주간' : '월간'}
@@ -344,7 +343,7 @@ export default function AdminReportsPage() {
                     </Link>
                   </div>
                   <p className="text-xs text-gray-500">
-                    {(r.author as { name: string } | null)?.name} · {r.organization} · 제출 {formatDate(r.submitted_at)}
+                    {r.author?.email} · {r.organization} · 제출 {formatDate(r.submitted_at)}
                   </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
@@ -355,7 +354,7 @@ export default function AdminReportsPage() {
                     검토
                   </Link>
                   <button
-                    onClick={() => setConfirm({ id: r.id, action: 'approve', name: (r.author as { name: string } | null)?.name ?? '' })}
+                    onClick={() => setConfirm({ id: r.id, action: 'approve', email: r.author?.email ?? '' })}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
                   >
                     승인
@@ -423,8 +422,7 @@ export default function AdminReportsPage() {
                 {sumResult.individuals.map((ind, i) => (
                   <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <p className="text-sm font-semibold text-gray-900">{ind.name}</p>
-                      <span className="text-xs text-gray-400">{ind.organization}</span>
+                      <p className="text-sm font-semibold text-gray-900">{ind.organization}</p>
                     </div>
                     <div className="space-y-1.5">
                       <div>
@@ -451,7 +449,7 @@ export default function AdminReportsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-5">
             <p className="text-sm font-medium text-gray-900 mb-5">
-              {confirm.name}님의 보고서를 승인하시겠습니까?
+              {confirm.email} 보고서를 승인하시겠습니까?
             </p>
             <div className="flex gap-2">
               <button onClick={() => setConfirm(null)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm hover:bg-gray-50">취소</button>

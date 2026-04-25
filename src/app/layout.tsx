@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "의료AI 직무교육사업 관리시스템",
-  description: "의료AI 직무교육사업 관리시스템",
+  title: "의료AI 사업관리시스템",
+  description: "의료AI 사업관리시스템",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

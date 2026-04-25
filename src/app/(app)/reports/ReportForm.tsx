@@ -318,7 +318,12 @@ function WeeklyFormBody({
               <tr>
                 <td className={`${TH_BASE} text-center`}>실무담당자</td>
                 <td className={TD_BASE}>
-                  <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
+                  <input
+                    value={value.org_info.operator_name}
+                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, operator_name: e.target.value } })}
+                    placeholder="성명 입력"
+                    className={inputCls}
+                  />
                 </td>
               </tr>
             </tbody>
@@ -468,7 +473,7 @@ interface OrgReport {
   period_start: string
   status: string
   content: WeeklyContent
-  author: { name: string } | null
+  author: { email: string; organization: string } | null
 }
 
 function OrgWeeklyReports({ year, month }: { year: number; month: number }) {
@@ -520,8 +525,8 @@ function OrgWeeklyReports({ year, month }: { year: number; month: number }) {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-xs text-gray-800 font-medium truncate">{r.period_label}</span>
-                      {r.author?.name && (
-                        <span className="text-xs text-gray-500 flex-shrink-0">{r.author.name}</span>
+                      {(r.author?.email || r.author?.organization) && (
+                        <span className="text-xs text-gray-500 flex-shrink-0">{r.author?.email ?? r.author?.organization ?? '-'}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -695,7 +700,12 @@ function MonthlyFormBody({
                 </td>
                 <td className={`${TH_BASE} w-24 text-center`}>실무담당자</td>
                 <td className={TD_BASE}>
-                  <input readOnly value={value.org_info.operator_name} className={readonlyCls} />
+                  <input
+                    value={value.org_info.operator_name}
+                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, operator_name: e.target.value } })}
+                    placeholder="성명 입력"
+                    className={inputCls}
+                  />
                 </td>
               </tr>
             </tbody>
@@ -898,7 +908,6 @@ function MonthlyFormBody({
 // Props
 // ─────────────────────────────────────────────────
 interface UserProfile {
-  name: string
   organization: string
   agency_type?: string
 }
@@ -953,10 +962,10 @@ export default function ReportForm({
   const [monthlyMonth, setMonthlyMonth] = useState(initialMonthlyMonth ?? (today.getMonth() + 1))
 
   const [weekly, setWeekly] = useState<WeeklyContent>(
-    initialWeeklyContent ?? defaultWeekly(userProfile.organization, userProfile.name, userProfile.agency_type)
+    initialWeeklyContent ?? defaultWeekly(userProfile.organization, userProfile.agency_type)
   )
   const [monthly, setMonthly] = useState<MonthlyContent>(
-    initialMonthlyContent ?? defaultMonthly(userProfile.organization, userProfile.name, userProfile.agency_type)
+    initialMonthlyContent ?? defaultMonthly(userProfile.organization, userProfile.agency_type)
   )
 
   const [prevWeekly, setPrevWeekly] = useState<WeeklyContent | undefined>()

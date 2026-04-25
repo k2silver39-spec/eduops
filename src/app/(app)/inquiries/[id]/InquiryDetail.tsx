@@ -7,7 +7,7 @@ interface Reply {
   id: string
   content: string
   created_at: string
-  admin: { name: string } | null
+  admin: { email: string } | null
 }
 
 interface Attachment {
@@ -34,13 +34,7 @@ interface Inquiry {
   organization: string
   created_at: string
   updated_at: string
-  author: { name: string } | null
-}
-
-function maskName(name: string | null | undefined): string {
-  if (!name) return '알 수 없음'
-  if (name.length <= 1) return name
-  return name[0] + '*'.repeat(name.length - 1)
+  author: { email: string; organization: string } | null
 }
 
 function formatDate(dateStr: string) {
@@ -272,7 +266,7 @@ export default function InquiryDetail({
           {/* Footer */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-400">
-              {isAdmin || isOwner ? (inquiry.author?.name ?? '알 수 없음') : maskName(inquiry.author?.name)}
+              {isAdmin || isOwner ? (inquiry.author?.email ?? '알 수 없음') : (inquiry.author?.organization ?? '—')}
               {isAdmin && inquiry.organization && (
                 <span className="ml-1 text-gray-400">· {inquiry.organization}</span>
               )}
@@ -355,7 +349,7 @@ export default function InquiryDetail({
                     <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
                     <div className="flex items-center justify-between mt-3">
                       <p className="text-xs text-blue-500 font-medium">
-                        {reply.admin?.name ?? '관리자'} · {formatDate(reply.created_at)}
+                        {reply.admin?.email ?? '관리자'} · {formatDate(reply.created_at)}
                       </p>
                       {isAdmin && (
                         <div className="flex gap-1">

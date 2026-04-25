@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Profile {
-  name: string
   email: string
   organization: string
   agency_type: string
@@ -15,11 +14,6 @@ export default function MyPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Name edit
-  const [editName, setEditName] = useState('')
-  const [nameLoading, setNameLoading] = useState(false)
-  const [nameMsg, setNameMsg] = useState('')
 
   // Organization edit
   const [editOrg, setEditOrg] = useState('')
@@ -45,13 +39,12 @@ export default function MyPage() {
 
       const { data } = await supabase
         .from('profiles')
-        .select('name, email, organization, agency_type')
+        .select('email, organization, agency_type')
         .eq('id', user.id)
         .single()
 
       if (data) {
         setProfile(data)
-        setEditName(data.name)
         setEditOrg(data.organization)
         setEditAgencyType(data.agency_type ?? '운영기관')
       }
@@ -59,27 +52,6 @@ export default function MyPage() {
     }
     load()
   }, [router])
-
-  const handleNameSave = async () => {
-    if (!editName.trim()) return
-    setNameLoading(true)
-    setNameMsg('')
-
-    const res = await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editName.trim() }),
-    })
-
-    if (!res.ok) {
-      setNameMsg('저장에 실패했습니다.')
-    } else {
-      setProfile(prev => prev ? { ...prev, name: editName.trim() } : prev)
-      setNameMsg('저장되었습니다.')
-    }
-    setNameLoading(false)
-    setTimeout(() => setNameMsg(''), 2500)
-  }
 
   const handleOrgSave = async () => {
     if (!editOrg.trim()) return
@@ -227,27 +199,6 @@ export default function MyPage() {
               </div>
             )}
             {agencyTypeMsg && <p className="text-xs text-blue-600 mt-1.5">{agencyTypeMsg}</p>}
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">이름</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-              <button
-                onClick={handleNameSave}
-                disabled={nameLoading || editName.trim() === profile?.name}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-medium rounded-lg transition"
-              >
-                저장
-              </button>
-            </div>
-            {nameMsg && (
-              <p className="text-xs text-blue-600 mt-1.5">{nameMsg}</p>
-            )}
           </div>
         </div>
       </section>

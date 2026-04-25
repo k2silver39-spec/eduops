@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 
 interface User {
   id: string
-  name: string
   email: string
   organization: string
   agency_type: string
@@ -135,7 +134,6 @@ export default function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">이름</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">이메일</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">소속 기관</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">기관구분</th>
@@ -147,12 +145,11 @@ export default function AdminUsersPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={tab === 'all' ? 8 : 7} className="px-4 py-10 text-center text-sm text-gray-400">불러오는 중...</td></tr>
+                <tr><td colSpan={tab === 'all' ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400">불러오는 중...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={tab === 'all' ? 8 : 7} className="px-4 py-10 text-center text-sm text-gray-400">사용자가 없습니다.</td></tr>
+                <tr><td colSpan={tab === 'all' ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400">사용자가 없습니다.</td></tr>
               ) : filtered.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{user.name}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{user.organization}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -178,11 +175,11 @@ export default function AdminUsersPage() {
                       {user.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => setConfirm({ userId: user.id, action: 'approve', label: `${user.name}님을 승인하시겠습니까?`, nextValue: 'approved' })}
+                            onClick={() => setConfirm({ userId: user.id, action: 'approve', label: `${user.email}(${user.organization}) 계정을 승인하시겠습니까?`, nextValue: 'approved' })}
                             className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
                           >승인</button>
                           <button
-                            onClick={() => setConfirm({ userId: user.id, action: 'reject', label: `${user.name}님을 거절하시겠습니까?`, nextValue: 'rejected' })}
+                            onClick={() => setConfirm({ userId: user.id, action: 'reject', label: `${user.email}(${user.organization}) 계정을 거절하시겠습니까?`, nextValue: 'rejected' })}
                             className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors"
                           >거절</button>
                         </>
@@ -193,8 +190,8 @@ export default function AdminUsersPage() {
                             userId: user.id,
                             action: 'role',
                             label: user.role === 'super_admin'
-                              ? `${user.name}님을 일반사용자로 변경하시겠습니까?`
-                              : `${user.name}님을 슈퍼관리자로 변경하시겠습니까?`,
+                              ? `${user.email}(${user.organization}) 계정을 일반사용자로 변경하시겠습니까?`
+                              : `${user.email}(${user.organization}) 계정을 슈퍼관리자로 변경하시겠습니까?`,
                             nextValue: user.role === 'super_admin' ? 'user' : 'super_admin',
                           })}
                           className="px-2.5 py-1 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"

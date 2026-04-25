@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   let query = admin
     .from('profiles')
-    .select('id, name, email, organization, agency_type, role, status, created_at')
+    .select('id, email, organization, agency_type, role, status, created_at')
     .order('created_at', { ascending: false })
 
   if (tab === 'pending') query = query.eq('status', 'pending')
