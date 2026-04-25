@@ -301,29 +301,10 @@ function WeeklyFormBody({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <tbody>
-              {value.org_info.agency_type && (
-                <tr>
-                  <td className={`${TH_BASE} w-36 text-center`}>기관구분</td>
-                  <td className={TD_BASE}>
-                    <input readOnly value={value.org_info.agency_type} className={readonlyCls} />
-                  </td>
-                </tr>
-              )}
               <tr>
                 <td className={`${TH_BASE} w-36 text-center`}>기관명</td>
                 <td className={TD_BASE}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
-                </td>
-              </tr>
-              <tr>
-                <td className={`${TH_BASE} text-center`}>실무담당자</td>
-                <td className={TD_BASE}>
-                  <input
-                    value={value.org_info.operator_name}
-                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, operator_name: e.target.value } })}
-                    placeholder="성명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
             </tbody>
@@ -674,38 +655,10 @@ function MonthlyFormBody({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <tbody>
-              {value.org_info.agency_type && (
-                <tr>
-                  <td className={`${TH_BASE} w-24 text-center`}>기관구분</td>
-                  <td className={TD_BASE} colSpan={3}>
-                    <input readOnly value={value.org_info.agency_type} className={readonlyCls} />
-                  </td>
-                </tr>
-              )}
               <tr>
                 <td className={`${TH_BASE} w-24 text-center`}>기관명</td>
                 <td className={TD_BASE} colSpan={3}>
                   <input readOnly value={value.org_info.operator} className={readonlyCls} />
-                </td>
-              </tr>
-              <tr>
-                <td className={`${TH_BASE} w-24 text-center`}>사업책임자</td>
-                <td className={TD_BASE}>
-                  <input
-                    value={value.org_info.project_manager ?? ''}
-                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, project_manager: e.target.value } })}
-                    placeholder="성명 입력"
-                    className={inputCls}
-                  />
-                </td>
-                <td className={`${TH_BASE} w-24 text-center`}>실무담당자</td>
-                <td className={TD_BASE}>
-                  <input
-                    value={value.org_info.operator_name}
-                    onChange={(e) => onChange({ ...value, org_info: { ...value.org_info, operator_name: e.target.value } })}
-                    placeholder="성명 입력"
-                    className={inputCls}
-                  />
                 </td>
               </tr>
             </tbody>
@@ -909,7 +862,6 @@ function MonthlyFormBody({
 // ─────────────────────────────────────────────────
 interface UserProfile {
   organization: string
-  agency_type?: string
 }
 
 interface ReportFormProps {
@@ -962,10 +914,10 @@ export default function ReportForm({
   const [monthlyMonth, setMonthlyMonth] = useState(initialMonthlyMonth ?? (today.getMonth() + 1))
 
   const [weekly, setWeekly] = useState<WeeklyContent>(
-    initialWeeklyContent ?? defaultWeekly(userProfile.organization, userProfile.agency_type)
+    initialWeeklyContent ?? defaultWeekly(userProfile.organization)
   )
   const [monthly, setMonthly] = useState<MonthlyContent>(
-    initialMonthlyContent ?? defaultMonthly(userProfile.organization, userProfile.agency_type)
+    initialMonthlyContent ?? defaultMonthly(userProfile.organization)
   )
 
   const [prevWeekly, setPrevWeekly] = useState<WeeklyContent | undefined>()

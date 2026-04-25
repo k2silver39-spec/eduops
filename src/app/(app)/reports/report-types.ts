@@ -8,11 +8,7 @@ export type ReportStatus = 'draft' | 'submitted' | 'approved' | 'revision_reques
 
 // 수행기관 정보
 export interface OrgInfo {
-  agency_type?: string        // 기관구분 (자동입력)
   operator: string            // 기관명 (자동입력)
-  project_manager?: string    // 사업책임자 (월간보고 직접 입력)
-  operator_name: string       // 사업실무자/실무담당자 (자동입력)
-  operator_position: string   // 직위
 }
 
 // ── 주간 보고서 ──
@@ -116,31 +112,21 @@ export function calcBudgetSubtotal(a: BudgetEntry, b: BudgetEntry) {
 }
 
 /** 기본 WeeklyContent 생성 */
-export function defaultWeekly(org: string, agencyType?: string): WeeklyContent {
+export function defaultWeekly(org: string): WeeklyContent {
   return {
     version: 2,
-    org_info: {
-      agency_type: agencyType,
-      operator: org,
-      operator_name: '',
-      operator_position: '실무담당자',
-    },
+    org_info: { operator: org },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
     activity_rows: ACTIVITY_LABELS.map(() => ({ current_week: '', next_week: '', note: '' })),
   }
 }
 
 /** 기본 MonthlyContent 생성 */
-export function defaultMonthly(org: string, agencyType?: string): MonthlyContent {
+export function defaultMonthly(org: string): MonthlyContent {
   const emptyBudget: BudgetEntry = { budget: '', executed: '' }
   return {
     version: 2,
-    org_info: {
-      agency_type: agencyType,
-      operator: org,
-      operator_name: '',
-      operator_position: '사업책임자',
-    },
+    org_info: { operator: org },
     kpi_rows: KPI_LABELS.map(() => ({ target: '', actual: '' })),
     qualitative: { target: '', actual: '', rate: '' },
     achievement_plan: '',

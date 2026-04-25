@@ -37,19 +37,9 @@ function WeeklyPreview({ content, periodLabel }: { content: WeeklyContent; perio
         <h3 className="text-xs font-bold text-gray-700 mb-1 border-b border-gray-400 pb-0.5">1. 수행기관 정보</h3>
         <table className="w-full border-collapse text-xs">
           <tbody>
-            {org_info.agency_type && (
-              <tr>
-                <td className={`${TH} w-36`}>기관구분</td>
-                <td className={TD}>{org_info.agency_type}</td>
-              </tr>
-            )}
             <tr>
               <td className={`${TH} w-36`}>기관명</td>
               <td className={TD}>{org_info.operator || '—'}</td>
-            </tr>
-            <tr>
-              <td className={TH}>실무담당자</td>
-              <td className={TD}>{org_info.operator_name || '—'}</td>
             </tr>
           </tbody>
         </table>
@@ -139,21 +129,9 @@ function MonthlyPreview({ content, periodLabel }: { content: MonthlyContent; per
         <h3 className="text-xs font-bold text-gray-700 mb-1 border-b border-gray-400 pb-0.5">1. 수행기관 정보</h3>
         <table className="w-full border-collapse text-xs">
           <tbody>
-            {org_info.agency_type && (
-              <tr>
-                <td className={`${TH} w-24`}>기관구분</td>
-                <td className={TD} colSpan={3}>{org_info.agency_type}</td>
-              </tr>
-            )}
             <tr>
               <td className={`${TH} w-24`}>기관명</td>
               <td className={TD} colSpan={3}>{org_info.operator || '—'}</td>
-            </tr>
-            <tr>
-              <td className={`${TH} w-24`}>사업책임자</td>
-              <td className={TD}>{org_info.project_manager || '—'}</td>
-              <td className={`${TH} w-24`}>실무담당자</td>
-              <td className={TD}>{org_info.operator_name || '—'}</td>
             </tr>
           </tbody>
         </table>

@@ -41,9 +41,7 @@ function buildWeeklyRows(report: ReportDownloadData): (string | number)[][] {
   rows.push([])
 
   rows.push(['1. 수행기관 정보'])
-  if (wc.org_info.agency_type) rows.push(['기관구분', wc.org_info.agency_type])
   rows.push(['기관명', wc.org_info.operator])
-  rows.push(['실무담당자', wc.org_info.operator_name])
   rows.push([])
 
   rows.push(['2. 성과지표 달성 현황'])
@@ -83,10 +81,7 @@ function buildMonthlyRows(report: ReportDownloadData): (string | number)[][] {
   rows.push([])
 
   rows.push(['1. 수행기관 정보'])
-  if (mc.org_info.agency_type) rows.push(['기관구분', mc.org_info.agency_type])
   rows.push(['기관명', mc.org_info.operator])
-  rows.push(['사업책임자', mc.org_info.project_manager || '—'])
-  rows.push(['실무담당자', mc.org_info.operator_name])
   rows.push([])
 
   rows.push(['2. 정량 및 정성 실적'])
@@ -198,9 +193,7 @@ function buildWeeklyHtml(report: ReportDownloadData): string {
   }).join('')
 
   const orgRows = [
-    wc.org_info.agency_type ? `<tr><th style="width:120px">기관구분</th><td>${esc(wc.org_info.agency_type)}</td></tr>` : '',
-    `<tr><th>기관명</th><td>${esc(wc.org_info.operator)}</td></tr>`,
-    `<tr><th>실무담당자</th><td>${esc(wc.org_info.operator_name)}</td></tr>`,
+    `<tr><th style="width:120px">기관명</th><td>${esc(wc.org_info.operator)}</td></tr>`,
   ].join('')
 
   const body = `
@@ -248,9 +241,7 @@ function buildMonthlyHtml(report: ReportDownloadData): string {
   }).join('')
 
   const orgRows = [
-    mc.org_info.agency_type ? `<tr><th style="width:100px">기관구분</th><td colspan="3">${esc(mc.org_info.agency_type)}</td></tr>` : '',
-    `<tr><th>기관명</th><td colspan="3">${esc(mc.org_info.operator)}</td></tr>`,
-    `<tr><th>사업책임자</th><td>${esc(mc.org_info.project_manager || '—')}</td><th>실무담당자</th><td>${esc(mc.org_info.operator_name)}</td></tr>`,
+    `<tr><th style="width:100px">기관명</th><td colspan="3">${esc(mc.org_info.operator)}</td></tr>`,
   ].join('')
 
   const body = `

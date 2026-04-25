@@ -80,19 +80,9 @@ function WeeklyDetail({ content }: { content: WeeklyContent }) {
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full border-collapse">
             <tbody>
-              {org_info.agency_type && (
-                <tr>
-                  <td className={`${TH} w-36`}>기관구분</td>
-                  <td className={TD}>{org_info.agency_type}</td>
-                </tr>
-              )}
               <tr>
                 <td className={`${TH} w-36`}>기관명</td>
                 <td className={TD}>{org_info.operator || '—'}</td>
-              </tr>
-              <tr>
-                <td className={TH}>실무담당자</td>
-                <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>
           </table>
@@ -186,21 +176,9 @@ function MonthlyDetail({ content }: { content: MonthlyContent }) {
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full border-collapse">
             <tbody>
-              {org_info.agency_type && (
-                <tr>
-                  <td className={`${TH} w-24`}>기관구분</td>
-                  <td className={TD} colSpan={3}>{org_info.agency_type}</td>
-                </tr>
-              )}
               <tr>
                 <td className={`${TH} w-24`}>기관명</td>
                 <td className={TD} colSpan={3}>{org_info.operator || '—'}</td>
-              </tr>
-              <tr>
-                <td className={`${TH} w-24`}>사업책임자</td>
-                <td className={TD}>{org_info.project_manager || '—'}</td>
-                <td className={`${TH} w-24`}>실무담당자</td>
-                <td className={TD}>{org_info.operator_name || '—'}</td>
               </tr>
             </tbody>
           </table>
