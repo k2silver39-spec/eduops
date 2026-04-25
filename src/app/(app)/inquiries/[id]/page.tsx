@@ -15,7 +15,7 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
   const [{ data: inquiry }, { data: profile }] = await Promise.all([
     admin
       .from('inquiries')
-      .select('*, author:profiles!user_id(name)')
+      .select('*, author:profiles!user_id(email, organization)')
       .eq('id', id)
       .single(),
     admin
@@ -37,7 +37,7 @@ export default async function InquiryDetailPage({ params }: { params: Promise<{ 
   const [{ data: replies }, { data: attachments }] = await Promise.all([
     admin
       .from('inquiry_replies')
-      .select('*, admin:profiles!admin_id(name)')
+      .select('*, admin:profiles!admin_id(email, organization)')
       .eq('inquiry_id', id)
       .order('created_at', { ascending: true }),
     admin

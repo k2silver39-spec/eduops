@@ -14,7 +14,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const [{ data: report }, { data: profile }, { data: attachments }] = await Promise.all([
     admin
       .from('reports')
-      .select('*, author:profiles!user_id(name)')
+      .select('*, author:profiles!user_id(email, organization)')
       .eq('id', id)
       .single(),
     admin

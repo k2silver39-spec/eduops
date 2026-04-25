@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { data, error } = await admin
     .from('inquiry_replies')
     .insert({ inquiry_id: id, admin_id: user.id, content: content.trim() })
-    .select('*, admin:profiles!admin_id(name)')
+    .select('*, admin:profiles!admin_id(email, organization)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

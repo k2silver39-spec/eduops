@@ -30,7 +30,7 @@ export async function PATCH(
     .from('inquiry_replies')
     .update({ content: content.trim(), updated_at: new Date().toISOString() })
     .eq('id', replyId)
-    .select('*, admin:profiles!admin_id(name)')
+    .select('*, admin:profiles!admin_id(email, organization)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
