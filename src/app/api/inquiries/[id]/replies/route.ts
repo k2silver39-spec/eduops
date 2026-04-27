@@ -33,22 +33,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await admin
-    .from('inquiries')
-    .select('user_id, title')
-    .eq('id', id)
-    .single()
-    .then(({ data: inq }) => {
-      if (!inq?.user_id) return
-      return notifyUser(
+  try {
+    const { data: inq } = await admin
+      .from('inquiries')
+      .select('user_id, title')
+      .eq('id', id)
+      .single()
+    if (inq?.user_id) {
+      await notifyUser(
         inq.user_id,
         'inquiry_reply',
         inq.title ?? '문의',
         '문의에 답변이 등록되었습니다.',
         id
       )
-    })
-    .catch((err: unknown) => console.error('[notify inquiry_reply]', err))
+    }
+  } catch (err) {
+    console.error('[notify inquiry_reply]', err)
+  }
 
   return NextResponse.json(data)
 }
