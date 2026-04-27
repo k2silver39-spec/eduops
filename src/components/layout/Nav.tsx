@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import NotificationBell from '@/components/notifications/NotificationBell'
 
 interface Profile {
   organization: string
@@ -196,11 +195,6 @@ export default function Nav({ profile }: { profile: Profile | null }) {
           })}
         </nav>
 
-        {/* Notification Bell */}
-        <div className="px-3 py-3 border-t border-gray-100 flex justify-end">
-          <NotificationBell isAdmin={isAdmin} />
-        </div>
-
         {/* User + Logout */}
         <div className="px-3 py-4 border-t border-gray-100">
           <div className="px-3 mb-3">
@@ -240,9 +234,6 @@ export default function Nav({ profile }: { profile: Profile | null }) {
               </Link>
             )
           })}
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[56px] py-2">
-            <NotificationBell isAdmin={isAdmin} />
-          </div>
         </div>
       </nav>
     </>
