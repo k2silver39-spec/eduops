@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyUser } from '@/lib/notifications/notify'
 import { NextResponse } from 'next/server'
 
 async function getAdminUser() {
@@ -31,5 +32,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await admin
+    .from('inquiries')
+    .select('user_id, title')
+    .eq('id', id)
+    .single()
+    .then(({ data: inq }) => {
+      if (!inq?.user_id) return
+      return notifyUser(
+        inq.user_id,
+        'inquiry_reply',
+        inq.title ?? '문의',
+        '문의에 답변이 등록되었습니다.',
+        id
+      )
+    })
+    .catch((err: unknown) => console.error('[notify inquiry_reply]', err))
+
   return NextResponse.json(data)
 }

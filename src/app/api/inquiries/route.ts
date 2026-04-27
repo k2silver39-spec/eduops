@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyAdmins } from '@/lib/notifications/notify'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -109,6 +110,13 @@ export async function POST(request: Request) {
       }))
     )
   }
+
+  await notifyAdmins(
+    'new_inquiry',
+    '새 문의: ' + title.trim().slice(0, 60),
+    '[' + (profile.organization ?? '') + '] ' + (content as string).trim().slice(0, 200),
+    data.id
+  ).catch((err) => console.error('[notify new_inquiry]', err))
 
   return NextResponse.json({ id: data.id })
 }

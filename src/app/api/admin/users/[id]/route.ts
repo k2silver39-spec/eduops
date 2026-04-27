@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyUser } from '@/lib/notifications/notify'
 import { NextResponse } from 'next/server'
 
 async function requireAdmin() {
@@ -33,5 +34,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (body.status === 'approved') {
+    await notifyUser(
+      id,
+      'signup_approved',
+      '가입이 승인되었습니다',
+      '의료AI 사업관리시스템 가입이 승인되었습니다. 로그인하여 이용해 주세요.'
+    ).catch((err) => console.error('[notify signup_approved]', err))
+  }
+
   return NextResponse.json(data)
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyUser } from '@/lib/notifications/notify'
 import { NextResponse } from 'next/server'
 
 async function requireAdmin() {
@@ -71,5 +72,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const isRevision =
+    body.status === 'revision_requested' ||
+    (typeof body.revision_comment === 'string' && body.revision_comment.trim().length > 0)
+
+  if (isRevision) {
+    const authorId = (data as Record<string, unknown>).user_id as string | undefined
+    const reportTypeStr =
+      (data as Record<string, unknown>).type === 'weekly' ? '주간보고' : '월간보고'
+    const label =
+      ((data as Record<string, unknown>).period_label as string | undefined) ?? '보고'
+    if (authorId) {
+      await notifyUser(
+        authorId,
+        'report_revision',
+        reportTypeStr + ' - ' + label,
+        body.revision_comment ?? '관리자가 정정을 요청했습니다.',
+        id
+      ).catch((err) => console.error('[notify report_revision]', err))
+    }
+  }
+
   return NextResponse.json(data)
 }
