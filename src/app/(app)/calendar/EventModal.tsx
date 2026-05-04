@@ -211,7 +211,7 @@ export default function EventModal({
       }
       if (isAllday) {
         firstStart = repeatStartDate + 'T00:00:00.000Z'
-        firstEnd   = repeatStartDate + 'T23:59:59.000Z'
+        firstEnd   = new Date(repeatStartDate + 'T23:59:59').toISOString()
       } else {
         if (!startTime || !endTime) { setError('시작/종료 시간을 입력해 주세요.'); return }
         firstStart = new Date(repeatStartDate + 'T' + startTime + ':00').toISOString()
@@ -225,7 +225,7 @@ export default function EventModal({
       const toIsoStart = (v: string) =>
         isAllday ? v + 'T00:00:00.000Z' : new Date(v).toISOString()
       const toIsoEnd = (v: string) =>
-        isAllday ? v + 'T23:59:59.000Z' : new Date(v).toISOString()
+        isAllday ? new Date(v + 'T23:59:59').toISOString() : new Date(v).toISOString()
       firstStart = toIsoStart(startVal)
       firstEnd   = toIsoEnd(endVal)
       if (new Date(firstStart) > new Date(firstEnd)) {
