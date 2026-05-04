@@ -52,17 +52,28 @@ export default function PushPermission() {
   const handleSubscribe = async () => {
     if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
       console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY not set')
+      setStatus('default')
+      setErrorMsg('푸시 설정이 누락되었습니다. 관리자에게 문의하세요.')
       return
     }
     setStatus('loading')
     setErrorMsg('')
     try {
+      console.log('[push] requesting permission...')
       const permission = await Notification.requestPermission()
+      console.log('[push] permission:', permission)
       if (permission !== 'granted') {
         setStatus(permission as PermissionStatus)
         return
       }
-      const reg = await navigator.serviceWorker.ready
+      console.log('[push] waiting for service worker...')
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('서비스 워커 준비 시간 초과')), 10000)
+        ),
+      ])
+      console.log('[push] SW ready, active state:', reg.active?.state)
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToArrayBuffer(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
