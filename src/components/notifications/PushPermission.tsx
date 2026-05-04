@@ -37,16 +37,18 @@ export default function PushPermission() {
       return
     }
 
-    // 브라우저 권한이 granted여도 실제 구독이 DB에 있는지 확인
+    const timer = setTimeout(() => setStatus('default'), 5000)
     navigator.serviceWorker.ready
       .then((reg) => reg.pushManager.getSubscription())
       .then((sub) => {
-        // 구독 객체가 없으면 재구독 유도
+        clearTimeout(timer)
         setStatus(sub ? 'granted' : 'default')
       })
       .catch(() => {
+        clearTimeout(timer)
         setStatus(browserPerm)
       })
+    return () => clearTimeout(timer)
   }, [])
 
   const handleSubscribe = async () => {
