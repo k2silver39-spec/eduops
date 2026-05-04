@@ -35,7 +35,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  const { id, all } = body as { id?: string; all?: boolean }
+  const { id, all, types } = body as { id?: string; all?: boolean; types?: string[] }
 
   if (all === true) {
     const { error } = await supabase
@@ -48,8 +48,20 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true })
   }
 
+  if (Array.isArray(types) && types.length > 0) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false)
+      .in('type', types)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  }
+
   if (!id) {
-    return NextResponse.json({ error: 'Missing id or all flag' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing id, types, or all flag' }, { status: 400 })
   }
 
   const { error } = await supabase

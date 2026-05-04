@@ -45,7 +45,7 @@ export async function PATCH(request: Request) {
   const { admin } = ctx
 
   const body = await request.json().catch(() => ({}))
-  const { id, all } = body as { id?: string; all?: boolean }
+  const { id, all, types } = body as { id?: string; all?: boolean; types?: string[] }
 
   if (all === true) {
     const { error } = await admin
@@ -57,8 +57,19 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  if (Array.isArray(types) && types.length > 0) {
+    const { error } = await admin
+      .from('admin_notifications')
+      .update({ is_read: true })
+      .eq('is_read', false)
+      .in('type', types)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
   if (!id) {
-    return NextResponse.json({ error: 'Missing id or all flag' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing id, types, or all flag' }, { status: 400 })
   }
 
   const { error } = await admin

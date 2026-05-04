@@ -145,6 +145,22 @@ export default function Nav({ profile }: { profile: Profile | null }) {
     return item.badgeHrefs.reduce((sum, type) => sum + (typeCounts[type] ?? 0), 0)
   }
 
+  const handleNavClick = (item: NavItem) => {
+    if (!item.badgeHrefs || item.badgeHrefs.length === 0) return
+    if (getBadgeCount(item) === 0) return
+    // 낙관적 업데이트: 해당 타입 배지 즉시 제거
+    setTypeCounts((prev) => {
+      const next = { ...prev }
+      item.badgeHrefs!.forEach((type) => { delete next[type] })
+      return next
+    })
+    fetch(apiBase, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ types: item.badgeHrefs }),
+    }).catch(() => {})
+  }
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
@@ -174,6 +190,7 @@ export default function Nav({ profile }: { profile: Profile | null }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleNavClick(item)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
                     ? 'bg-blue-50 text-blue-600'
@@ -222,6 +239,7 @@ export default function Nav({ profile }: { profile: Profile | null }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleNavClick(item)}
                 className="flex-1 flex flex-col items-center justify-center min-h-[56px] py-2 gap-0.5"
               >
                 <span className="relative">

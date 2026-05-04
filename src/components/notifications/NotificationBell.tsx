@@ -105,7 +105,11 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
 
   const handleNotificationClick = (n: Notification) => {
     if (!n.is_read) {
-      // fire-and-forget
+      // 낙관적 업데이트: 즉시 로컬 상태 반영
+      setNotifications((prev) =>
+        prev.map((item) => item.id === n.id ? { ...item, is_read: true } : item)
+      )
+      setUnreadCount((prev) => Math.max(0, prev - 1))
       fetch(apiBase, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
