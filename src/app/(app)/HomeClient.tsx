@@ -72,7 +72,7 @@ export default function HomeClient() {
 
   const eventsByDay: Record<string, CalEvent[]> = {}
   for (const ev of events) {
-    const key = ev.start_at.slice(0, 10)
+    const key = toDateKey(new Date(ev.start_at))
     if (!eventsByDay[key]) eventsByDay[key] = []
     eventsByDay[key].push(ev)
   }
