@@ -5,7 +5,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || '알림'
   const options = {
     body: data.body || '',
-    icon: '/favicon.ico',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
     data: { url: data.url || '/' },
   }
 
@@ -20,10 +21,10 @@ self.addEventListener('notificationclick', (event) => {
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        for (const client of windowClients) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus()
-          }
+        if (windowClients.length > 0 && 'focus' in windowClients[0]) {
+          windowClients[0].focus()
+          windowClients[0].navigate(url)
+          return
         }
         if (clients.openWindow) {
           return clients.openWindow(url)

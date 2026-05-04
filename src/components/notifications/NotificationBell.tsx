@@ -7,6 +7,7 @@ type NotificationType =
   | 'signup_approved'
   | 'inquiry_reply'
   | 'report_revision'
+  | 'report_reminder'
   | 'new_inquiry'
   | 'new_report'
 
@@ -47,6 +48,8 @@ function buildHref(n: Notification): string {
       return n.reference_id ? `/inquiries/${n.reference_id}` : '/inquiries'
     case 'report_revision':
       return n.reference_id ? `/reports/${n.reference_id}` : '/reports'
+    case 'report_reminder':
+      return '/reports'
     case 'new_inquiry':
       return n.reference_id ? `/admin/inquiries/${n.reference_id}` : '/admin/inquiries'
     case 'new_report':

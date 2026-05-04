@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import PushPermission from '@/components/notifications/PushPermission'
 
 interface Profile {
   email: string
@@ -97,6 +98,16 @@ export default function MyPage() {
             <p className="text-xs text-gray-400 mb-0.5">소속 기관</p>
             <p className="text-sm text-gray-700">{profile?.organization || '—'}</p>
           </div>
+        </div>
+      </section>
+
+      {/* Push Notifications */}
+      <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900">푸시 알림</h2>
+        </div>
+        <div className="px-4 py-4">
+          <PushPermission />
         </div>
       </section>
 

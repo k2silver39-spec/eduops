@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyAdmins } from '@/lib/notifications/notify'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -189,6 +190,16 @@ export async function POST(request: Request) {
         }))
       )
     }
+  }
+
+  if (status === 'submitted') {
+    const reportTypeLabel = type === 'weekly' ? '주간보고' : '월간보고'
+    notifyAdmins(
+      'new_report',
+      '새 ' + reportTypeLabel + ' 제출: ' + period_label,
+      '[' + (profile.organization ?? '') + '] ' + reportTypeLabel + ' 제출 (' + period_start + ' ~ ' + period_end + ')',
+      data.id
+    ).catch((err) => console.error('[notify new_report]', err))
   }
 
   return NextResponse.json({ id: data.id })
