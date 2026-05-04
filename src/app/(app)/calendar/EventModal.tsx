@@ -210,8 +210,8 @@ export default function EventModal({
         setError('반복 요일을 1개 이상 선택해 주세요.'); return
       }
       if (isAllday) {
-        firstStart = new Date(repeatStartDate + 'T00:00:00').toISOString()
-        firstEnd   = new Date(repeatStartDate + 'T23:59:59').toISOString()
+        firstStart = repeatStartDate + 'T00:00:00.000Z'
+        firstEnd   = repeatStartDate + 'T23:59:59.000Z'
       } else {
         if (!startTime || !endTime) { setError('시작/종료 시간을 입력해 주세요.'); return }
         firstStart = new Date(repeatStartDate + 'T' + startTime + ':00').toISOString()
@@ -223,9 +223,9 @@ export default function EventModal({
     } else {
       if (!startVal || !endVal) { setError('날짜를 입력해 주세요.'); return }
       const toIsoStart = (v: string) =>
-        isAllday ? new Date(v + 'T00:00:00').toISOString() : new Date(v).toISOString()
+        isAllday ? v + 'T00:00:00.000Z' : new Date(v).toISOString()
       const toIsoEnd = (v: string) =>
-        isAllday ? new Date(v + 'T23:59:59').toISOString() : new Date(v).toISOString()
+        isAllday ? v + 'T23:59:59.000Z' : new Date(v).toISOString()
       firstStart = toIsoStart(startVal)
       firstEnd   = toIsoEnd(endVal)
       if (new Date(firstStart) > new Date(firstEnd)) {
