@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -15,6 +16,10 @@ async function requireAdmin() {
 export async function POST(request: Request) {
   const ctx = await requireAdmin()
   if (!ctx) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const rl = await checkRateLimit(ctx.user.id, 'summarize', 10)
+  if (!rl.allowed) return rateLimitResponse(rl)
+
   const { admin } = ctx
 
   const { startDate, endDate, organization } = await request.json()
@@ -96,9 +101,32 @@ export async function POST(request: Request) {
     }),
   })
 
-  if (!aiRes.ok) return NextResponse.json({ error: 'AI 요약 요청 실패' }, { status: 500 })
+  if (!aiRes.ok) {
+    await admin.from('ai_audit_log').insert({
+      user_id: ctx.user.id,
+      endpoint: 'summarize',
+      model: 'gpt-4o-mini',
+      input_chars: prompt.length,
+      output_chars: 0,
+      status: 'error',
+      error_message: `OpenAI API ${aiRes.status}`,
+      metadata: { startDate, endDate, organization },
+    })
+    return NextResponse.json({ error: 'AI 요약 요청 실패' }, { status: 500 })
+  }
 
   const aiData = await aiRes.json()
   const result = JSON.parse(aiData.choices[0].message.content)
+
+  await admin.from('ai_audit_log').insert({
+    user_id: ctx.user.id,
+    endpoint: 'summarize',
+    model: 'gpt-4o-mini',
+    input_chars: prompt.length,
+    output_chars: aiData.choices[0].message.content.length,
+    status: 'success',
+    metadata: { startDate, endDate, organization, reports_count: reports.length },
+  })
+
   return NextResponse.json(result)
 }

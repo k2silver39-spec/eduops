@@ -8,6 +8,7 @@ import PushPermission from '@/components/notifications/PushPermission'
 interface Profile {
   email: string
   organization: string
+  role: 'super_admin' | 'user'
 }
 
 export default function MyPage() {
@@ -20,6 +21,13 @@ export default function MyPage() {
   const [pwLoading, setPwLoading] = useState(false)
   const [pwMsg, setPwMsg] = useState('')
   const [pwError, setPwError] = useState('')
+
+  // Withdraw
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawPassword, setWithdrawPassword] = useState('')
+  const [withdrawConfirmText, setWithdrawConfirmText] = useState('')
+  const [withdrawLoading, setWithdrawLoading] = useState(false)
+  const [withdrawError, setWithdrawError] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -65,6 +73,42 @@ export default function MyPage() {
     }
     setPwLoading(false)
     setTimeout(() => setPwMsg(''), 3000)
+  }
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWithdrawError('')
+
+    if (withdrawConfirmText.trim() !== '탈퇴') {
+      setWithdrawError('확인 문구를 정확히 입력해주세요.')
+      return
+    }
+    if (!withdrawPassword) {
+      setWithdrawError('비밀번호를 입력해주세요.')
+      return
+    }
+
+    setWithdrawLoading(true)
+    const res = await fetch('/api/profile', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: withdrawPassword }),
+    })
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      const msg =
+        data.error === 'wrong_password' ? '비밀번호가 올바르지 않습니다.' :
+        data.error === 'admin_cannot_withdraw' ? '관리자 계정은 직접 탈퇴할 수 없습니다.' :
+        '계정 탈퇴에 실패했습니다. 잠시 후 다시 시도해주세요.'
+      setWithdrawError(msg)
+      setWithdrawLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.replace('/auth/login')
   }
 
   const handleLogout = async () => {
@@ -169,6 +213,77 @@ export default function MyPage() {
       >
         로그아웃
       </button>
+
+      {/* Withdraw */}
+      {profile?.role !== 'super_admin' && (
+        <section className="bg-white border border-red-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-red-100">
+            <h2 className="text-sm font-semibold text-red-600">계정 탈퇴</h2>
+          </div>
+
+          {!withdrawOpen ? (
+            <div className="px-4 py-4 space-y-3">
+              <p className="text-xs text-gray-500 leading-relaxed">
+                계정을 탈퇴하면 작성하신 보고서·문의·첨부파일·알림 설정이 모두 영구 삭제되며 복구할 수 없습니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setWithdrawOpen(true); setWithdrawError(''); setWithdrawPassword(''); setWithdrawConfirmText('') }}
+                className="w-full border border-red-300 hover:bg-red-50 text-red-600 font-medium py-2.5 rounded-lg text-sm transition"
+              >
+                계정 탈퇴 진행
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleWithdraw} className="px-4 py-4 space-y-3">
+              <p className="text-xs text-red-600 leading-relaxed">
+                이 작업은 되돌릴 수 없습니다. 계속하려면 비밀번호와 확인 문구를 입력하세요.
+              </p>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">비밀번호</label>
+                <input
+                  type="password"
+                  value={withdrawPassword}
+                  onChange={(e) => setWithdrawPassword(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">
+                  확인 문구 <span className="text-red-500 font-medium">탈퇴</span> 를 입력하세요
+                </label>
+                <input
+                  type="text"
+                  value={withdrawConfirmText}
+                  onChange={(e) => setWithdrawConfirmText(e.target.value)}
+                  required
+                  placeholder="탈퇴"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                />
+              </div>
+              {withdrawError && <p className="text-xs text-red-600">{withdrawError}</p>}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setWithdrawOpen(false); setWithdrawError(''); setWithdrawPassword(''); setWithdrawConfirmText('') }}
+                  disabled={withdrawLoading}
+                  className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={withdrawLoading}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition"
+                >
+                  {withdrawLoading ? '처리 중...' : '영구 탈퇴'}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
     </div>
   )
 }

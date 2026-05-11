@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Nav from '@/components/layout/Nav'
 import MobileHeader from '@/components/layout/MobileHeader'
 import SessionGuard from '@/components/layout/SessionGuard'
+import SecurityNoticeModal from '@/components/layout/SecurityNoticeModal'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -29,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50">
       <SessionGuard />
+      <SecurityNoticeModal />
       <Nav profile={userProfile} />
       <MobileHeader />
 

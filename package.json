@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "start": "next start"
+    "start": "next start",
+    "audit:check": "npm audit --audit-level=moderate",
+    "audit:fix": "npm audit fix",
+    "audit:report": "npm audit --json > audit-report.json"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.52",
@@ -33,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "docx": "^9.6.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

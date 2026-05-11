@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
@@ -8,6 +9,9 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const rl = await checkRateLimit(user.id, 'upload', 20)
+  if (!rl.allowed) return rateLimitResponse(rl)
 
   const formData = await request.formData()
   const file = formData.get('file') as File | null
